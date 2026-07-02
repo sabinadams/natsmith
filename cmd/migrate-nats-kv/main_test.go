@@ -135,13 +135,13 @@ type memKeyValueEntry struct {
 	value []byte
 }
 
-func (e *memKeyValueEntry) Bucket() string                    { return "mem" }
-func (e *memKeyValueEntry) Key() string                       { return e.key }
-func (e *memKeyValueEntry) Value() []byte                     { return e.value }
-func (e *memKeyValueEntry) Revision() uint64                  { return 1 }
-func (e *memKeyValueEntry) Created() time.Time                { return time.Now() }
-func (e *memKeyValueEntry) Delta() uint64                     { return 0 }
-func (e *memKeyValueEntry) Operation() jetstream.KeyValueOp   { return jetstream.KeyValuePut }
+func (e *memKeyValueEntry) Bucket() string                  { return "mem" }
+func (e *memKeyValueEntry) Key() string                     { return e.key }
+func (e *memKeyValueEntry) Value() []byte                   { return e.value }
+func (e *memKeyValueEntry) Revision() uint64                { return 1 }
+func (e *memKeyValueEntry) Created() time.Time              { return time.Now() }
+func (e *memKeyValueEntry) Delta() uint64                   { return 0 }
+func (e *memKeyValueEntry) Operation() jetstream.KeyValueOp { return jetstream.KeyValuePut }
 
 func TestListKVBuckets(t *testing.T) {
 	srv := startNATSServer(t)
