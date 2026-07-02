@@ -1,0 +1,15 @@
+# Build output
+bin/
+
+# Credentials and secrets
+*.creds
+
+# Local backup artifacts
+backups/
+
+# Verification failure logs
+failures.log
+*-failures.log
+
+# OS
+.DS_Store
