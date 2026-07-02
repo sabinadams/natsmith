@@ -19,14 +19,6 @@ Pin a release:
 go install github.com/sabinadams/natsmith/cmd/natsmith@v0.1.0
 ```
 
-### Private repository
-
-```bash
-go env -w GOPRIVATE=github.com/sabinadams/natsmith
-```
-
-You also need GitHub credentials that can read the repo. Public clones can skip `GOPRIVATE`.
-
 ## Run without installing
 
 Use `go run` and pass the subcommand after `--`:
