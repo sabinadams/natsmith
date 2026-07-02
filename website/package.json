@@ -1,0 +1,20 @@
+{
+  "name": "natsmith-docs",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --webpack",
+    "start": "next start",
+    "postinstall": "patch-package"
+  },
+  "dependencies": {
+    "next": "^16.0.7",
+    "nextra": "4.6.1",
+    "nextra-theme-docs": "4.6.1",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.0"
+  }
+}

@@ -1,0 +1,54 @@
+# natsmith
+
+Migrate JetStream **KV buckets** and **object stores** between NATS clusters — with verification built in.
+
+Unofficial CLI toolkit for [NATS](https://nats.io) and JetStream. Not affiliated with Synadia; this is a focused migration tool, not a replacement for the official [`nats` CLI](https://github.com/nats-io/natscli).
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `natsmith migrate kv` | Copy KV buckets and verify byte-for-byte |
+| `natsmith migrate objects` | Copy object store buckets |
+
+## At a glance
+
+| | |
+|---|---|
+| **Source** | Read-only — scans streams, never deletes source data |
+| **Destination** | Copies matching records; does **not** remove extra keys or objects on dest |
+| **Buckets** | Must already exist on destination (e.g. Terraform) |
+| **Credentials** | Source: read · Destination: write (`.creds` files) |
+
+## How it works
+
+```text
+  source cluster                         destination cluster
+ ┌─────────────────┐                   ┌─────────────────┐
+ │  KV / OBJ data  │  ── natsmith ──▶  │  existing       │
+ │  (read-only)    │     copy +        │  buckets        │
+ └─────────────────┘     verify          └─────────────────┘
+```
+
+1. Connect to source and destination
+2. List buckets (optionally filter with `-bucket` / `-omit`)
+3. Scan each bucket's JetStream stream
+4. Copy to destination (unless `-dry-run` or `-verify-only`)
+5. Print per-bucket summary and final totals
+
+See [Recommended workflow](/workflow) before a production migration.
+
+## Quick start
+
+```bash
+export PATH="$(go env GOPATH)/bin:$PATH"
+go install github.com/sabinadams/natsmith/cmd/natsmith@latest
+
+natsmith migrate kv -dry-run \
+  -source-url nats://source.example.com:4222 \
+  -source-creds /path/to/source.creds \
+  -dest-url nats://dest.example.com:4222 \
+  -dest-creds /path/to/dest.creds
+```
+
+Full install options are on the [Install](/install) page.

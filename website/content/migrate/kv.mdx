@@ -1,0 +1,84 @@
+# Migrate KV
+
+Scans each source KV bucket via its backing JetStream stream (`KV_<bucket>`) and classifies keys:
+
+| Classification | Meaning |
+|----------------|---------|
+| **migratable** | Latest op is Put — copied to destination |
+| **omitted** | Tombstone / purge / delete — not copied |
+
+Post-migration verification (on by default) compares migratable keys byte-for-byte. Exit code is non-zero when keys are missing, values mismatch, or destination has extra keys.
+
+**Success looks like:** `N/N migratable copied` and `verify: N ok, 0 missing, 0 mismatch, 0 dest-only`.
+
+## KV-specific flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-verify` | `true` | Verify destination after migration |
+| `-verify-only` | `false` | Compare source and dest without writing |
+| `-failures-file` | — | Append verification issues to a log file |
+
+Plus [connection and shared migrate flags](/connection-flags).
+
+## Examples
+
+### Dry-run all buckets
+
+```bash
+natsmith migrate kv -dry-run \
+  -source-url nats://source.example.com:4222 \
+  -source-creds /path/to/source.creds \
+  -dest-url nats://dest.example.com:4222 \
+  -dest-creds /path/to/dest.creds \
+  -workers 16
+```
+
+### Migrate all buckets
+
+```bash
+natsmith migrate kv \
+  -source-url nats://source.example.com:4222 \
+  -source-creds /path/to/source.creds \
+  -dest-url nats://dest.example.com:4222 \
+  -dest-creds /path/to/dest.creds \
+  -workers 16 \
+  -failures-file kv-failures.log
+```
+
+### Migrate one bucket
+
+```bash
+natsmith migrate kv \
+  -source-url nats://source.example.com:4222 \
+  -source-creds /path/to/source.creds \
+  -dest-url nats://dest.example.com:4222 \
+  -dest-creds /path/to/dest.creds \
+  -bucket my-bucket \
+  -workers 16 \
+  -failures-file kv-failures.log
+```
+
+### Verify only
+
+```bash
+natsmith migrate kv -verify-only \
+  -source-url nats://source.example.com:4222 \
+  -source-creds /path/to/source.creds \
+  -dest-url nats://dest.example.com:4222 \
+  -dest-creds /path/to/dest.creds \
+  -bucket my-bucket \
+  -workers 16
+```
+
+### Resume an interrupted run
+
+```bash
+natsmith migrate kv \
+  -source-url nats://source.example.com:4222 \
+  -source-creds /path/to/source.creds \
+  -dest-url nats://dest.example.com:4222 \
+  -dest-creds /path/to/dest.creds \
+  -skip-existing \
+  -workers 16
+```

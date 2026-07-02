@@ -12,6 +12,20 @@ cd natsmith
 make install   # installs natsmith to $(go env GOPATH)/bin
 ```
 
+Docs site ([Nextra 4](https://nextra.site/) + Next.js 16):
+
+```bash
+cd website && npm install && npm run dev   # http://localhost:3000
+```
+
+`npm install` runs `patch-package` to apply a one-line fix for a Layout validation bug in `nextra-theme-docs@4.6.1` (fixed upstream, not yet in npm).
+
+Or build static export locally (same as GitHub Pages):
+
+```bash
+cd website && NEXT_PUBLIC_BASE_PATH=/natsmith npm run build
+```
+
 Or build into `./bin` without installing globally:
 
 ```bash
@@ -149,13 +163,15 @@ go mod tidy && git diff --exit-code go.mod go.sum
 
 Integration tests spin up an embedded NATS server; no external cluster is required for `go test`.
 
-Cross-cluster migration tests use [Testcontainers](https://golang.testcontainers.org/) to run separate NATS Docker instances. They require Docker and are gated behind the `integration` build tag:
+Cross-cluster tests use [Testcontainers](https://golang.testcontainers.org/) (requires Docker, `-tags=integration`):
 
 ```bash
 go test -tags=integration -count=1 -timeout=10m ./internal/integration/ ./cmd/migrate/
 ```
 
 CI runs integration tests in a dedicated step after unit tests.
+
+User-facing documentation is built with [Nextra](https://nextra.site/) in `website/` and published to [GitHub Pages](https://sabinadams.github.io/natsmith/) on every push to `main`. Enable **Settings → Pages → Build and deployment → GitHub Actions** if the site is not live yet.
 
 ## Adding a command
 

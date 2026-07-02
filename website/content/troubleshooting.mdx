@@ -1,0 +1,13 @@
+# Troubleshooting
+
+| Problem | Likely cause |
+|---------|--------------|
+| `command not found` | Add `$(go env GOPATH)/bin` to your `PATH`, or use [pre-built binaries](/install#pre-built-binaries) |
+| `connect to …` | Wrong URL, network, or credentials |
+| `destination bucket not found` | Create the bucket on destination first (Terraform) |
+| KV / object scan appears stuck | Large stream — progress updates every 250 messages; wait or filter with `-bucket` |
+| Object store reports omitted | Meta on source but object data not retrievable (deleted / tombstone) |
+| Object copy failures / `context canceled` | Increase `-timeout` (e.g. `5m`) and/or lower `-workers` |
+| Verify reports missing / mismatch | Re-run `natsmith migrate kv -verify-only -failures-file kv-failures.log …` |
+| Verify reports dest-only | Extra keys on destination not in source migratable set |
+| Link migration fails | Linked bucket or object not migrated yet |

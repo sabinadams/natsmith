@@ -1,0 +1,55 @@
+# Migrate objects
+
+Copies object blobs and recreates link objects in a second pass.
+
+| Behavior | Detail |
+|----------|--------|
+| Destination buckets | Opens existing buckets only — does not create or set descriptions |
+| Scan | Full `OBJ_<bucket>` stream for meta, then `GetInfo` probe per candidate |
+| Omitted objects | Meta exists but data is not retrievable (common on legacy buckets) |
+| Timeouts | Each copy uses at least 5 minutes; raise `-timeout` for large files |
+| Concurrency | Lower `-workers` (e.g. 8) for buckets with very large objects |
+
+**Dry-run output:** `listed`, `meta-active`, `meta-omitted` per bucket.
+
+**Full run output:** `listed`, `migratable`, `omitted`, then `N/N copied` with optional `(N failed)`.
+
+Uses [connection and shared migrate flags](/connection-flags) only — no verify mode (unlike KV).
+
+## Examples
+
+### Dry-run all buckets
+
+```bash
+natsmith migrate objects -dry-run \
+  -source-url nats://source.example.com:4222 \
+  -source-creds /path/to/source.creds \
+  -dest-url nats://dest.example.com:4222 \
+  -dest-creds /path/to/dest.creds \
+  -workers 16
+```
+
+### Migrate all buckets
+
+```bash
+natsmith migrate objects \
+  -source-url nats://source.example.com:4222 \
+  -source-creds /path/to/source.creds \
+  -dest-url nats://dest.example.com:4222 \
+  -dest-creds /path/to/dest.creds \
+  -workers 16 \
+  -timeout 5m
+```
+
+### Migrate one bucket
+
+```bash
+natsmith migrate objects \
+  -source-url nats://source.example.com:4222 \
+  -source-creds /path/to/source.creds \
+  -dest-url nats://dest.example.com:4222 \
+  -dest-creds /path/to/dest.creds \
+  -bucket my-bucket \
+  -workers 16 \
+  -timeout 5m
+```

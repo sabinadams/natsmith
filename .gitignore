@@ -25,3 +25,8 @@ coverage/
 
 # OS
 .DS_Store
+
+# Docs site (Next.js / Nextra)
+website/node_modules/
+website/.next/
+website/out/
