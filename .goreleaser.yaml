@@ -41,6 +41,7 @@ brews:
     repository:
       owner: sabinadams
       name: homebrew-natsmith
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Formula
     homepage: "https://sabinadams.github.io/natsmith/"
     description: "CLI tooling for NATS and JetStream"
