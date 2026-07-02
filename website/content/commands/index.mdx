@@ -1,0 +1,14 @@
+# Commands
+
+All migration commands live under `natsmith migrate`. Each command page lists its flags and examples.
+
+| Command | Description |
+|---------|-------------|
+| [`natsmith migrate kv`](/commands/migrate-kv) | Copy KV buckets and verify byte-for-byte |
+| [`natsmith migrate objects`](/commands/migrate-objects) | Copy object store buckets |
+
+Connection flags (`-source-url`, `-dest-url`, credentials) are persistent on `migrate` — pass them before or after the subcommand:
+
+```bash
+natsmith migrate kv -source-url … -dest-url … -dry-run
+```

@@ -1,8 +1,7 @@
 export default {
   index: 'Introduction',
   install: 'Install',
-  'connection-flags': 'Connection flags',
-  migrate: 'Migrate',
+  commands: 'Commands',
   workflow: 'Recommended workflow',
   troubleshooting: 'Troubleshooting',
 }

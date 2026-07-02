@@ -1,4 +1,8 @@
-# Migrate KV
+# migrate kv
+
+```bash
+natsmith migrate kv [flags]
+```
 
 Scans each source KV bucket via its backing JetStream stream (`KV_<bucket>`) and classifies keys:
 
@@ -11,15 +15,40 @@ Post-migration verification (on by default) compares migratable keys byte-for-by
 
 **Success looks like:** `N/N migratable copied` and `verify: N ok, 0 missing, 0 mismatch, 0 dest-only`.
 
-## KV-specific flags
+## Flags
+
+### Connection
+
+Required on every run. These are persistent flags on `migrate`:
+
+| Flag | Required | Example |
+|------|----------|---------|
+| `-source-url` | yes | `nats://source.example.com:4222` |
+| `-dest-url` | yes | `nats://dest.example.com:4222` |
+| `-source-creds` | when source uses `.creds` | `/path/to/source.creds` |
+| `-dest-creds` | when destination uses `.creds` | `/path/to/dest.creds` |
+
+### Shared
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-bucket` | all | Comma-separated buckets to migrate |
+| `-omit` | — | Comma-separated buckets to skip |
+| `-dry-run` | `false` | List buckets and records without writing |
+| `-skip-existing` | `false` | Skip records that already exist on destination |
+| `-workers` | `1` | Concurrent workers (1–64) |
+| `-timeout` | `30s` | Per-request NATS timeout |
+| `-no-progress` | `false` | Plain log output (useful in CI) |
+
+Use `-bucket` to select buckets, `-omit` to exclude them, or both (`-bucket` first, then `-omit` removes from that set).
+
+### KV-specific
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `-verify` | `true` | Verify destination after migration |
 | `-verify-only` | `false` | Compare source and dest without writing |
 | `-failures-file` | — | Append verification issues to a log file |
-
-Plus [connection and shared migrate flags](/connection-flags).
 
 ## Examples
 

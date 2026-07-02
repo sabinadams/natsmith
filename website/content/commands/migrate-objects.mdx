@@ -1,4 +1,8 @@
-# Migrate objects
+# migrate objects
+
+```bash
+natsmith migrate objects [flags]
+```
 
 Copies object blobs and recreates link objects in a second pass.
 
@@ -14,7 +18,34 @@ Copies object blobs and recreates link objects in a second pass.
 
 **Full run output:** `listed`, `migratable`, `omitted`, then `N/N copied` with optional `(N failed)`.
 
-Uses [connection and shared migrate flags](/connection-flags) only — no verify mode (unlike KV).
+No verify mode (unlike KV).
+
+## Flags
+
+### Connection
+
+Required on every run. These are persistent flags on `migrate`:
+
+| Flag | Required | Example |
+|------|----------|---------|
+| `-source-url` | yes | `nats://source.example.com:4222` |
+| `-dest-url` | yes | `nats://dest.example.com:4222` |
+| `-source-creds` | when source uses `.creds` | `/path/to/source.creds` |
+| `-dest-creds` | when destination uses `.creds` | `/path/to/dest.creds` |
+
+### Shared
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-bucket` | all | Comma-separated buckets to migrate |
+| `-omit` | — | Comma-separated buckets to skip |
+| `-dry-run` | `false` | List buckets and records without writing |
+| `-skip-existing` | `false` | Skip records that already exist on destination |
+| `-workers` | `1` | Concurrent workers (1–64) |
+| `-timeout` | `30s` | Per-request NATS timeout |
+| `-no-progress` | `false` | Plain log output (useful in CI) |
+
+Use `-bucket` to select buckets, `-omit` to exclude them, or both (`-bucket` first, then `-omit` removes from that set).
 
 ## Examples
 

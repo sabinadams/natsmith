@@ -14,8 +14,9 @@ Unofficial CLI for [NATS](https://nats.io) JetStream migrations. Not affiliated 
 **Full docs:** [sabinadams.github.io/natsmith](https://sabinadams.github.io/natsmith/)
 
 - [Install](https://sabinadams.github.io/natsmith/install/)
-- [Migrate KV](https://sabinadams.github.io/natsmith/migrate/kv/)
-- [Migrate objects](https://sabinadams.github.io/natsmith/migrate/objects/)
+- [Commands](https://sabinadams.github.io/natsmith/commands/)
+- [migrate kv](https://sabinadams.github.io/natsmith/commands/migrate-kv/)
+- [migrate objects](https://sabinadams.github.io/natsmith/commands/migrate-objects/)
 - [Troubleshooting](https://sabinadams.github.io/natsmith/troubleshooting/)
 
 ## Quick start
