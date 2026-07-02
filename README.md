@@ -109,15 +109,9 @@ go version -m "$(command -v migrate-nats-objects)"
 
 For pre-built binaries, download the newer release archive and replace the files on your `PATH`.
 
-New releases are published when a `v*.*.*` tag is pushed; [GoReleaser](https://goreleaser.com/) builds assets and attaches them to the GitHub release automatically.
+## Contributing
 
-### Development
-
-```bash
-git clone git@github.com:sabinadams/natsmith.git
-cd natsmith
-make install   # or: make build && export PATH="$PWD/bin:$PATH"
-```
+Development setup, CI, and release instructions for maintainers are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Connection flags
 
