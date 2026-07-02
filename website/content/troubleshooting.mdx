@@ -1,13 +1,40 @@
 # Troubleshooting
 
+## Installation
+
 | Problem | Likely cause |
 |---------|--------------|
-| `command not found` | Add `$(go env GOPATH)/bin` to your `PATH`, or use [pre-built binaries](/install#pre-built-binaries) |
-| `connect to …` | Wrong URL, network, or credentials |
-| `destination bucket not found` | Create the bucket on destination first (Terraform) |
-| KV / object scan appears stuck | Large stream — progress updates every 250 messages; wait or filter with `-bucket` |
-| Object store reports omitted | Meta on source but object data not retrievable (deleted / tombstone) |
-| Object copy failures / `context canceled` | Increase `-timeout` (e.g. `5m`) and/or lower `-workers` |
+| `command not found` after install script or Homebrew | `/usr/local/bin` (or your `INSTALL_DIR`) is not on your `PATH` |
+| `command not found` after `go install` | Add `$(go env GOPATH)/bin` to your `PATH` |
+| Install script fails to download | No release for your OS/arch, or GitHub API rate limit — try [Homebrew](/install#homebrew-macos--linux) or a [manual download](/install#github-releases) |
+| `go install …@latest` fails on old tag | Use `@v0.2.1` or newer; see [Install](/install#with-go) |
+
+## Connection
+
+| Problem | Likely cause |
+|---------|--------------|
+| `connect to …` / connection timeout | Wrong URL, network/firewall, or credentials |
+| Authentication errors | Missing or wrong `-source-creds` / `-dest-creds` for that cluster |
+
+## migrate kv
+
+| Problem | Likely cause |
+|---------|--------------|
+| `destination bucket not found` | Create the KV bucket on destination first (e.g. Terraform) |
+| Scan appears stuck | Large stream — progress updates every 250 messages; wait or filter with `-bucket` |
 | Verify reports missing / mismatch | Re-run `natsmith migrate kv -verify-only -failures-file kv-failures.log …` |
 | Verify reports dest-only | Extra keys on destination not in source migratable set |
+
+See [`migrate kv`](/commands/migrate/kv) for flags and examples.
+
+## migrate objects
+
+| Problem | Likely cause |
+|---------|--------------|
+| `destination bucket not found` | Create the object store bucket on destination first |
+| Scan appears stuck | Large meta stream — progress updates every 250 messages; wait or filter with `-bucket` |
+| Object store reports omitted | Meta on source but object data not retrievable (deleted / tombstone) |
+| Copy failures / `context canceled` | Increase `-timeout` (e.g. `5m`) and/or lower `-workers` |
 | Link migration fails | Linked bucket or object not migrated yet |
+
+See [`migrate objects`](/commands/migrate/objects) for flags and examples.

@@ -46,13 +46,7 @@ See the [Install](https://sabinadams.github.io/natsmith/install/) page for GitHu
 
 ## Quick start
 
-```bash
-natsmith migrate kv -dry-run \
-  -source-url nats://source.example.com:4222 \
-  -source-creds /path/to/source.creds \
-  -dest-url nats://dest.example.com:4222 \
-  -dest-creds /path/to/dest.creds
-```
+See the [docs](https://sabinadams.github.io/natsmith/commands/migrate/) for command reference and examples.
 
 ## Commands
 
@@ -61,7 +55,7 @@ natsmith migrate kv -dry-run \
 | `natsmith migrate kv` | Copy KV buckets and verify |
 | `natsmith migrate objects` | Copy object store buckets |
 
-Destination buckets must already exist. natsmith is read-only on source and does not delete extra destination data.
+See [Commands](https://sabinadams.github.io/natsmith/commands/) for flags and the [recommended workflow](https://sabinadams.github.io/natsmith/commands/migrate/workflow/) for production migrations.
 
 ## Contributing
 

@@ -1,0 +1,45 @@
+# migrate
+
+```bash
+natsmith migrate [flags] <subcommand>
+```
+
+Copy JetStream **KV buckets** and **object stores** from a source cluster to a destination cluster.
+
+| Subcommand | Description |
+|------------|-------------|
+| [`kv`](/commands/migrate/kv) | Copy KV buckets and verify byte-for-byte |
+| [`objects`](/commands/migrate/objects) | Copy object store buckets |
+
+Connection flags (`-source-url`, `-dest-url`, credentials) are persistent on `migrate` — pass them before or after the subcommand:
+
+```bash
+natsmith migrate kv -source-url … -dest-url … -dry-run
+```
+
+## At a glance
+
+| | |
+|---|---|
+| **Source** | Read-only — scans streams, never deletes source data |
+| **Destination** | Copies matching records; does **not** remove extra keys or objects on dest |
+| **Buckets** | Must already exist on destination (e.g. Terraform) |
+| **Credentials** | Source: read · Destination: write (`.creds` files) |
+
+## How it works
+
+```text
+  source cluster                         destination cluster
+ ┌─────────────────┐                   ┌─────────────────┐
+ │  KV / OBJ data  │  ── natsmith ──▶  │  existing       │
+ │  (read-only)    │     copy +        │  buckets        │
+ └─────────────────┘     verify          └─────────────────┘
+```
+
+1. Connect to source and destination
+2. List buckets (optionally filter with `-bucket` / `-omit`)
+3. Scan each bucket's JetStream stream
+4. Copy to destination (unless `-dry-run` or `-verify-only`)
+5. Print per-bucket summary and final totals
+
+For a production run, follow the [recommended workflow](/commands/migrate/workflow).
