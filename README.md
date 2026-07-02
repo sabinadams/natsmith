@@ -13,21 +13,39 @@ Both tools are read-only on source. They copy matching records to destination; t
 
 ## Prerequisites
 
-- Go 1.25+ (to install from source)
 - Network access to both NATS clusters
 - `.creds` files with **read** access on source and **write** access on destination
 - **Destination buckets must already exist** (e.g. via Terraform) — neither migration tool creates or updates bucket config
 
+Go 1.25+ is required for `go install` and `go run`. Pre-built [release binaries](#option-3-pre-built-binaries) do not require Go.
+
 ## Install
+
+These are **global CLI tools** — like `nx` or the official `nats` CLI. They are not dependencies of your project. Install once (or run ad hoc) and invoke them from any directory.
+
+### Option 1: Global install (recommended)
+
+Add Go's bin directory to your `PATH` (once per shell profile):
+
+```bash
+export PATH="$(go env GOPATH)/bin:$PATH"
+```
+
+Install both commands:
 
 ```bash
 go install github.com/sabinadams/natsmith/cmd/migrate-nats-kv@latest
 go install github.com/sabinadams/natsmith/cmd/migrate-nats-objects@latest
 ```
 
-Ensure `$(go env GOPATH)/bin` is on your `PATH`.
+Pin a specific release:
 
-**Private repository:** If this repo is private, configure Go to fetch it directly:
+```bash
+go install github.com/sabinadams/natsmith/cmd/migrate-nats-kv@v0.1.0
+go install github.com/sabinadams/natsmith/cmd/migrate-nats-objects@v0.1.0
+```
+
+**Private repository:** configure Go to fetch this module directly:
 
 ```bash
 go env -w GOPRIVATE=github.com/sabinadams/natsmith
@@ -35,19 +53,63 @@ go env -w GOPRIVATE=github.com/sabinadams/natsmith
 
 You also need GitHub SSH or HTTPS credentials that can read the repo. Public clones can skip `GOPRIVATE`.
 
-Pin a release:
-
-```bash
-go install github.com/sabinadams/natsmith/cmd/migrate-nats-kv@v0.1.0
-go install github.com/sabinadams/natsmith/cmd/migrate-nats-objects@v0.1.0
-```
-
 Verify:
 
 ```bash
 migrate-nats-kv -h
 migrate-nats-objects -h
 ```
+
+### Option 2: Run without installing
+
+Like `npx` — no global install; pass flags after `--`:
+
+```bash
+go run github.com/sabinadams/natsmith/cmd/migrate-nats-kv@v0.1.0 -- \
+  -source-url nats://source.example.com:4222 \
+  -source-creds /path/to/source.creds \
+  -dest-url nats://dest.example.com:4222 \
+  -dest-creds /path/to/dest.creds \
+  -dry-run
+```
+
+Use `@latest` for the newest tag, or pin `@v0.1.0` for a specific release. The same `GOPRIVATE` setup applies for private repos.
+
+### Option 3: Pre-built binaries
+
+If you do not have Go installed, download an archive for your platform from [GitHub Releases](https://github.com/sabinadams/natsmith/releases). Each archive includes both `migrate-nats-kv` and `migrate-nats-objects`. Verify downloads with `checksums.txt` on the release page.
+
+Example (macOS arm64):
+
+```bash
+VERSION=v0.1.0
+curl -LO "https://github.com/sabinadams/natsmith/releases/download/${VERSION}/natsmith_${VERSION#v}_darwin_arm64.tar.gz"
+tar xzf "natsmith_${VERSION#v}_darwin_arm64.tar.gz"
+chmod +x migrate-nats-kv migrate-nats-objects
+sudo mv migrate-nats-kv migrate-nats-objects /usr/local/bin/
+```
+
+Windows releases are `.zip` archives. Put the `.exe` files somewhere on your `PATH`.
+
+## Updating
+
+Re-run `go install` with `@latest` or a new tag:
+
+```bash
+go install github.com/sabinadams/natsmith/cmd/migrate-nats-kv@latest
+go install github.com/sabinadams/natsmith/cmd/migrate-nats-objects@latest
+```
+
+To see which module version built your installed binary:
+
+```bash
+go version -m "$(command -v migrate-nats-kv)"
+go version -m "$(command -v migrate-nats-objects)"
+```
+
+For pre-built binaries, download the newer release archive and replace the files on your `PATH`.
+
+New releases are published when a `v*.*.*` tag is pushed; [GoReleaser](https://goreleaser.com/) builds assets and attaches them to the GitHub release automatically.
 
 ### Development
 
@@ -238,7 +300,7 @@ migrate-nats-objects \
 
 | Problem | Likely cause |
 |---------|--------------|
-| `command not found` | Ensure `$(go env GOPATH)/bin` is on your `PATH` |
+| `command not found` | Add `$(go env GOPATH)/bin` to your `PATH`, or use [pre-built binaries](#option-3-pre-built-binaries) |
 | `connect to …` | Wrong URL, network, or credentials |
 | `destination bucket not found` | Create the bucket on destination first (Terraform) |
 | KV scan / object scan appears stuck | Large stream; progress updates every 250 messages — wait, or filter with `-bucket` |

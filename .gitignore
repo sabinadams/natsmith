@@ -1,6 +1,9 @@
 # Build output
 bin/
 
+# GoReleaser local builds
+dist/
+
 # Credentials and secrets
 *.creds
 
