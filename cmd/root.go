@@ -1,0 +1,31 @@
+package cmd
+
+import (
+	"errors"
+	"os"
+
+	migratecmd "github.com/sabinadams/natsmith/cmd/migrate"
+	"github.com/sabinadams/natsmith/internal/migration"
+	"github.com/spf13/cobra"
+)
+
+var rootCmd = &cobra.Command{
+	Use:   "natsmith",
+	Short: "Unofficial NATS and JetStream migration toolkit",
+	Long:  "Unofficial CLI toolkit for NATS and JetStream. Not affiliated with Synadia.",
+}
+
+func init() {
+	rootCmd.AddCommand(migratecmd.Command())
+}
+
+// Execute runs the natsmith CLI and exits with a non-zero status on failure.
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		var exitErr *migration.ExitError
+		if errors.As(err, &exitErr) {
+			os.Exit(exitErr.Code)
+		}
+		os.Exit(1)
+	}
+}

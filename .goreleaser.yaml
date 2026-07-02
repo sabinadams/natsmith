@@ -8,22 +8,9 @@ before:
     - go test ./...
 
 builds:
-  - id: migrate-nats-kv
-    main: ./cmd/migrate-nats-kv
-    binary: migrate-nats-kv
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
-
-  - id: migrate-nats-objects
-    main: ./cmd/migrate-nats-objects
-    binary: migrate-nats-objects
+  - id: natsmith
+    main: ./cmd/natsmith
+    binary: natsmith
     env:
       - CGO_ENABLED=0
     goos:

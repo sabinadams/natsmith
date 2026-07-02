@@ -1,5 +1,6 @@
 # Build output
 bin/
+/natsmith
 
 # GoReleaser local builds
 dist/

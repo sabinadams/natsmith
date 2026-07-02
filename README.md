@@ -6,8 +6,8 @@ Unofficial CLI toolkit for [NATS](https://nats.io) and JetStream. Not affiliated
 
 | Command | Description |
 |---------|-------------|
-| `migrate-nats-kv` | Copy KV buckets between clusters and verify |
-| `migrate-nats-objects` | Copy object store buckets between clusters |
+| `natsmith migrate kv` | Copy KV buckets between clusters and verify |
+| `natsmith migrate objects` | Copy object store buckets between clusters |
 
 Both tools are read-only on source. They copy matching records to destination; they do **not** delete destination keys or objects absent from source.
 
@@ -31,18 +31,16 @@ Add Go's bin directory to your `PATH` (once per shell profile):
 export PATH="$(go env GOPATH)/bin:$PATH"
 ```
 
-Install both commands:
+Install `natsmith`:
 
 ```bash
-go install github.com/sabinadams/natsmith/cmd/migrate-nats-kv@latest
-go install github.com/sabinadams/natsmith/cmd/migrate-nats-objects@latest
+go install github.com/sabinadams/natsmith/cmd/natsmith@latest
 ```
 
 Pin a specific release:
 
 ```bash
-go install github.com/sabinadams/natsmith/cmd/migrate-nats-kv@v0.1.0
-go install github.com/sabinadams/natsmith/cmd/migrate-nats-objects@v0.1.0
+go install github.com/sabinadams/natsmith/cmd/natsmith@v0.1.0
 ```
 
 **Private repository:** configure Go to fetch this module directly:
@@ -56,16 +54,16 @@ You also need GitHub SSH or HTTPS credentials that can read the repo. Public clo
 Verify:
 
 ```bash
-migrate-nats-kv -h
-migrate-nats-objects -h
+natsmith migrate kv -h
+natsmith migrate objects -h
 ```
 
 ### Option 2: Run without installing
 
-Like `npx` — no global install; pass flags after `--`:
+Like `npx` — no global install; pass the subcommand and flags after `--`:
 
 ```bash
-go run github.com/sabinadams/natsmith/cmd/migrate-nats-kv@v0.1.0 -- \
+go run github.com/sabinadams/natsmith/cmd/natsmith@v0.1.0 -- migrate kv \
   -source-url nats://source.example.com:4222 \
   -source-creds /path/to/source.creds \
   -dest-url nats://dest.example.com:4222 \
@@ -77,7 +75,7 @@ Use `@latest` for the newest tag, or pin `@v0.1.0` for a specific release. The s
 
 ### Option 3: Pre-built binaries
 
-If you do not have Go installed, download an archive for your platform from [GitHub Releases](https://github.com/sabinadams/natsmith/releases). Each archive includes both `migrate-nats-kv` and `migrate-nats-objects`. Verify downloads with `checksums.txt` on the release page.
+If you do not have Go installed, download an archive for your platform from [GitHub Releases](https://github.com/sabinadams/natsmith/releases). Each archive contains the `natsmith` binary. Verify downloads with `checksums.txt` on the release page.
 
 Example (macOS arm64):
 
@@ -85,33 +83,31 @@ Example (macOS arm64):
 VERSION=v0.1.0
 curl -LO "https://github.com/sabinadams/natsmith/releases/download/${VERSION}/natsmith_${VERSION#v}_darwin_arm64.tar.gz"
 tar xzf "natsmith_${VERSION#v}_darwin_arm64.tar.gz"
-chmod +x migrate-nats-kv migrate-nats-objects
-sudo mv migrate-nats-kv migrate-nats-objects /usr/local/bin/
+chmod +x natsmith
+sudo mv natsmith /usr/local/bin/
 ```
 
-Windows releases are `.zip` archives. Put the `.exe` files somewhere on your `PATH`.
+Windows releases are `.zip` archives. Put `natsmith.exe` somewhere on your `PATH`.
 
 ## Updating
 
 Re-run `go install` with `@latest` or a new tag:
 
 ```bash
-go install github.com/sabinadams/natsmith/cmd/migrate-nats-kv@latest
-go install github.com/sabinadams/natsmith/cmd/migrate-nats-objects@latest
+go install github.com/sabinadams/natsmith/cmd/natsmith@latest
 ```
 
 To see which module version built your installed binary:
 
 ```bash
-go version -m "$(command -v migrate-nats-kv)"
-go version -m "$(command -v migrate-nats-objects)"
+go version -m "$(command -v natsmith)"
 ```
 
 For pre-built binaries, download the newer release archive and replace the files on your `PATH`.
 
 ## Contributing
 
-Development setup, CI, and release instructions for maintainers are in [CONTRIBUTING.md](CONTRIBUTING.md).
+Development setup, CI, release instructions, and the **code architecture** (how `cmd/` and `internal/` are split) are in [CONTRIBUTING.md](CONTRIBUTING.md#architecture).
 
 ## Connection flags
 
@@ -124,7 +120,7 @@ Pass these four flags on **every** command:
 | `-dest-url` | `nats://dest.example.com:4222` |
 | `-dest-creds` | `/path/to/dest.creds` |
 
-## migrate-nats-kv
+## migrate kv
 
 Scans each source KV bucket via its backing JetStream stream (`KV_<bucket>`) and classifies keys:
 
@@ -159,7 +155,7 @@ Use `-bucket` to select buckets, `-omit` to exclude them, or both (`-bucket` fir
 **Dry-run all buckets:**
 
 ```bash
-migrate-nats-kv -dry-run \
+natsmith migrate kv -dry-run \
   -source-url nats://source.example.com:4222 \
   -source-creds /path/to/source.creds \
   -dest-url nats://dest.example.com:4222 \
@@ -170,7 +166,7 @@ migrate-nats-kv -dry-run \
 **Migrate all buckets:**
 
 ```bash
-migrate-nats-kv \
+natsmith migrate kv \
   -source-url nats://source.example.com:4222 \
   -source-creds /path/to/source.creds \
   -dest-url nats://dest.example.com:4222 \
@@ -182,7 +178,7 @@ migrate-nats-kv \
 **Migrate one bucket:**
 
 ```bash
-migrate-nats-kv \
+natsmith migrate kv \
   -source-url nats://source.example.com:4222 \
   -source-creds /path/to/source.creds \
   -dest-url nats://dest.example.com:4222 \
@@ -195,7 +191,7 @@ migrate-nats-kv \
 **Verify only:**
 
 ```bash
-migrate-nats-kv -verify-only \
+natsmith migrate kv -verify-only \
   -source-url nats://source.example.com:4222 \
   -source-creds /path/to/source.creds \
   -dest-url nats://dest.example.com:4222 \
@@ -207,7 +203,7 @@ migrate-nats-kv -verify-only \
 **Resume an interrupted run:**
 
 ```bash
-migrate-nats-kv \
+natsmith migrate kv \
   -source-url nats://source.example.com:4222 \
   -source-creds /path/to/source.creds \
   -dest-url nats://dest.example.com:4222 \
@@ -216,7 +212,7 @@ migrate-nats-kv \
   -workers 16
 ```
 
-## migrate-nats-objects
+## migrate objects
 
 Copies object blobs and recreates link objects in a second pass.
 
@@ -249,7 +245,7 @@ In addition to the [connection flags](#connection-flags):
 **Dry-run all buckets:**
 
 ```bash
-migrate-nats-objects -dry-run \
+natsmith migrate objects -dry-run \
   -source-url nats://source.example.com:4222 \
   -source-creds /path/to/source.creds \
   -dest-url nats://dest.example.com:4222 \
@@ -260,7 +256,7 @@ migrate-nats-objects -dry-run \
 **Migrate all buckets:**
 
 ```bash
-migrate-nats-objects \
+natsmith migrate objects \
   -source-url nats://source.example.com:4222 \
   -source-creds /path/to/source.creds \
   -dest-url nats://dest.example.com:4222 \
@@ -272,7 +268,7 @@ migrate-nats-objects \
 **Migrate one bucket:**
 
 ```bash
-migrate-nats-objects \
+natsmith migrate objects \
   -source-url nats://source.example.com:4222 \
   -source-creds /path/to/source.creds \
   -dest-url nats://dest.example.com:4222 \
@@ -284,8 +280,8 @@ migrate-nats-objects \
 
 ## Recommended workflow
 
-1. **Dry-run KV** — `migrate-nats-kv -dry-run …`
-2. **Dry-run objects** — `migrate-nats-objects -dry-run …`
+1. **Dry-run KV** — `natsmith migrate kv -dry-run …`
+2. **Dry-run objects** — `natsmith migrate objects -dry-run …`
 3. **Migrate one KV bucket** — `-bucket my-bucket`, then `-verify-only` on the same bucket
 4. **Full KV migration** — all buckets with `-failures-file`
 5. **Full object migration** — all buckets with `-timeout 5m`
@@ -300,7 +296,7 @@ migrate-nats-objects \
 | KV scan / object scan appears stuck | Large stream; progress updates every 250 messages — wait, or filter with `-bucket` |
 | Object store reports omitted | Meta exists on source but object data is not retrievable (deleted/tombstone) |
 | Object copy failures / `context canceled` | Increase `-timeout` (e.g. `-timeout 5m`) and/or lower `-workers` |
-| Verify reports missing/mismatch | Re-run `migrate-nats-kv -verify-only -failures-file kv-failures.log …` |
+| Verify reports missing/mismatch | Re-run `natsmith migrate kv -verify-only -failures-file kv-failures.log …` |
 | Verify reports dest-only | Extra keys on destination not in source migratable set |
 | Link migration fails | Linked bucket/object not migrated yet |
 

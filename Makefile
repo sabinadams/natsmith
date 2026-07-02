@@ -1,15 +1,21 @@
 GO ?= go
 BIN_DIR := bin
 
-.PHONY: build clean install
+.PHONY: build clean install test test-integration
 
-build: ## Build bin/migrate-nats-kv and bin/migrate-nats-objects
+build: ## Build bin/natsmith
 	@mkdir -p $(BIN_DIR)
-	$(GO) build -o $(BIN_DIR)/migrate-nats-kv ./cmd/migrate-nats-kv
-	$(GO) build -o $(BIN_DIR)/migrate-nats-objects ./cmd/migrate-nats-objects
+	$(GO) build -o $(BIN_DIR)/natsmith ./cmd/natsmith
 
-install: ## Install migrate-nats-kv and migrate-nats-objects to $(GOBIN)
-	$(GO) install ./cmd/migrate-nats-kv ./cmd/migrate-nats-objects
+install: ## Install natsmith to $(GOBIN)
+	$(GO) install ./cmd/natsmith
 
-clean: ## Remove built binaries
+test: ## Run unit tests
+	$(GO) test -race -count=1 ./...
+
+test-integration: ## Run cross-cluster integration tests (requires Docker)
+	$(GO) test -tags=integration -count=1 -timeout=10m ./internal/integration/ ./cmd/migrate/
+
+clean: ## Remove built binaries and test artifacts
 	rm -rf $(BIN_DIR)
+	rm -f natsmith coverage.out

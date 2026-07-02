@@ -34,6 +34,9 @@ jobs:
       - name: Test
         run: go test -race -count=1 -coverprofile=coverage.out ./...
 
+      - name: Integration test
+        run: go test -tags=integration -count=1 -timeout=10m ./internal/integration/ ./cmd/migrate/
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
