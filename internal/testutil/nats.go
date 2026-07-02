@@ -17,6 +17,7 @@ func StartServer(t *testing.T) *server.Server {
 	opts := test.DefaultTestOptions
 	opts.Port = -1
 	opts.JetStream = true
+	opts.StoreDir = t.TempDir()
 	srv := test.RunServer(&opts)
 	t.Cleanup(func() { srv.Shutdown() })
 	return srv

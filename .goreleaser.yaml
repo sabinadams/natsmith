@@ -5,7 +5,7 @@ project_name: natsmith
 before:
   hooks:
     - go mod tidy
-    - go test ./...
+    - go test -count=1 ./...
 
 builds:
   - id: natsmith

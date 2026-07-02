@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/sabinadams/natsmith/internal/migration"
 	"github.com/sabinadams/natsmith/internal/progress"
@@ -178,16 +177,8 @@ func (e *memKeyValueEntry) Operation() jetstream.KeyValueOp { return jetstream.K
 
 func TestListKVBuckets(t *testing.T) {
 	srv := testutil.StartServer(t)
-	nc, err := nats.Connect(srv.ClientURL(), nats.Timeout(5*time.Second))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer nc.Close()
-
-	js, err := jetstream.New(nc, jetstream.WithDefaultTimeout(5*time.Second))
-	if err != nil {
-		t.Fatal(err)
-	}
+	nc := testutil.Connect(t, srv.ClientURL())
+	js := testutil.JetStream(t, nc)
 	ctx := testutil.Context(t)
 
 	bucket := "listkv-selected"
