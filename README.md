@@ -55,7 +55,7 @@ See the [docs](https://sabinadams.github.io/natsmith/commands/migrate/) for comm
 | `natsmith migrate kv` | Copy KV buckets and verify |
 | `natsmith migrate objects` | Copy object store buckets |
 
-See [Commands](https://sabinadams.github.io/natsmith/commands/) for flags and the [recommended workflow](https://sabinadams.github.io/natsmith/commands/migrate/workflow/) for production migrations.
+See [Commands](https://sabinadams.github.io/natsmith/commands/) for flags and the [migrate overview](https://sabinadams.github.io/natsmith/commands/migrate/) for production workflow.
 
 ## Contributing
 
