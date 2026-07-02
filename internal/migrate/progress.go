@@ -21,7 +21,6 @@ type ItemStats struct {
 	Total    int
 	Migrated int
 	Skipped  int
-	Omitted  int // not migratable on source (deleted meta / tombstone)
 	Failed   int // migratable but could not be copied
 }
 
@@ -126,7 +125,7 @@ func (b *BucketBar) ClearItem() {
 
 // ReportStreamScan updates progress while scanning a KV backing stream.
 func (b *BucketBar) ReportStreamScan(p StreamScanProgress) {
-	desc := b.baseDesc
+	var desc string
 	if p.StreamMessages > 0 {
 		desc = fmt.Sprintf("%s — %d/%d stream messages (%d keys)", b.baseDesc, p.Scanned, p.StreamMessages, p.UniqueKeys)
 	} else {
@@ -147,7 +146,7 @@ func (b *BucketBar) ReportStreamScan(p StreamScanProgress) {
 
 // ReportObjectScan updates progress while scanning an object store meta stream.
 func (b *BucketBar) ReportObjectScan(p ObjectScanProgress) {
-	desc := b.baseDesc
+	var desc string
 	if p.StreamMessages > 0 {
 		desc = fmt.Sprintf("%s — %d/%d stream messages (%d objects)", b.baseDesc, p.Scanned, p.StreamMessages, p.UniqueObjects)
 	} else {
@@ -193,9 +192,6 @@ func (b *BucketBar) Finish(stats ItemStats) {
 	summary := fmt.Sprintf("  ✓ %s — %d/%d copied", b.baseDesc, stats.Migrated, stats.Total)
 	if stats.Skipped > 0 {
 		summary += fmt.Sprintf(" (%d skipped)", stats.Skipped)
-	}
-	if stats.Omitted > 0 {
-		summary += fmt.Sprintf(" (%d omitted — not on source)", stats.Omitted)
 	}
 	if stats.Failed > 0 {
 		summary += fmt.Sprintf(" (%d failed)", stats.Failed)

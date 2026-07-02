@@ -11,5 +11,13 @@ backups/
 failures.log
 *-failures.log
 
+# Test artifacts
+coverage.out
+coverage/
+*.coverprofile
+*.test
+*.prof
+*.pprof
+
 # OS
 .DS_Store

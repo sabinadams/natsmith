@@ -174,7 +174,7 @@ func Connect(url, creds string, requestTimeout time.Duration) (*nats.Conn, jetst
 	}
 
 	opts := []nats.Option{
-		nats.Name("nats-keys-migrate"),
+		nats.Name("natsmith"),
 		nats.MaxReconnects(-1),
 		nats.Timeout(requestTimeout),
 	}
