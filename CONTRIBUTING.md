@@ -234,7 +234,7 @@ Publishing creates the tag on GitHub. That triggers the [Release workflow](.gith
 1. Run `go mod tidy` and `go test ./...`
 2. Cross-compile the `natsmith` binary for linux, darwin, and windows (amd64 and arm64)
 3. Attach platform archives and `checksums.txt` to the GitHub release you just created
-4. Update the Homebrew formula in [`Formula/natsmith.rb`](Formula/natsmith.rb) (install via `brew install sabinadams/natsmith/natsmith`)
+4. Update the Homebrew formula in [`homebrew-natsmith`](https://github.com/sabinadams/homebrew-natsmith) (install via `brew install sabinadams/natsmith/natsmith`)
 
 Write release notes in the UI before publishing. The workflow adds binaries afterward — it does not replace your notes.
 

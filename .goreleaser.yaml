@@ -40,7 +40,7 @@ brews:
   - name: natsmith
     repository:
       owner: sabinadams
-      name: natsmith
+      name: homebrew-natsmith
     directory: Formula
     homepage: "https://sabinadams.github.io/natsmith/"
     description: "CLI tooling for NATS and JetStream"
