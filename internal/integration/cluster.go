@@ -27,7 +27,8 @@ func StartNATSPair(t *testing.T) Pair {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	t.Cleanup(cancel)
 
-	source, err := tcnats.Run(ctx, natsImage, tcnats.WithArgument("js", ""))
+	// JetStream is enabled by default in the testcontainers NATS module (-DV -js).
+	source, err := tcnats.Run(ctx, natsImage)
 	if err != nil {
 		t.Fatalf("start source nats: %v", err)
 	}
@@ -35,7 +36,7 @@ func StartNATSPair(t *testing.T) Pair {
 		_ = source.Terminate(context.Background())
 	})
 
-	dest, err := tcnats.Run(ctx, natsImage, tcnats.WithArgument("js", ""))
+	dest, err := tcnats.Run(ctx, natsImage)
 	if err != nil {
 		t.Fatalf("start destination nats: %v", err)
 	}

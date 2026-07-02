@@ -21,9 +21,9 @@ func TestKVMigrationAcrossContainers(t *testing.T) {
 
 	sourceKV := integration.CreateKV(t, pair.SourceURL, bucket)
 	integration.PutKV(t, sourceKV, map[string][]byte{
-		"active":   []byte("value-1"),
-		"other":    []byte("value-2"),
-		"deleted":  []byte("gone"),
+		"active":  []byte("value-1"),
+		"other":   []byte("value-2"),
+		"deleted": []byte("gone"),
 	})
 	if err := sourceKV.Delete(context.Background(), "deleted"); err != nil {
 		t.Fatalf("delete key: %v", err)
