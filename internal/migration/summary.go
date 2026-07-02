@@ -5,6 +5,15 @@ import (
 	"os"
 )
 
+// ExitError signals a non-zero process exit code from a command handler to cmd.Execute.
+type ExitError struct {
+	Code int
+}
+
+func (e *ExitError) Error() string {
+	return fmt.Sprintf("exit status %d", e.Code)
+}
+
 // Summary totals across all buckets in one migration run.
 type Summary struct {
 	Buckets      int
@@ -59,4 +68,13 @@ func PrintSummary(kind string, summary Summary) {
 		}
 	}
 	fmt.Fprintln(os.Stderr, msg)
+}
+
+// CompleteRun prints the final summary and returns ExitError when exitCode is non-zero.
+func CompleteRun(kind string, summary Summary, exitCode int) error {
+	PrintSummary(kind, summary)
+	if exitCode != 0 {
+		return &ExitError{Code: exitCode}
+	}
+	return nil
 }

@@ -12,14 +12,11 @@ func TestConnectClusters(t *testing.T) {
 	srv := testutil.StartServer(t)
 	url := srv.ClientURL()
 
-	cfg, err := NewBaseConfig(BaseConfigInput{
-		SourceURL: url,
-		DestURL:   url,
-		Workers:   1,
-		Timeout:   5 * time.Second,
-	})
-	if err != nil {
-		t.Fatal(err)
+	cfg := BaseConfig{
+		SourceURL:      url,
+		DestURL:        url,
+		Workers:        1,
+		RequestTimeout: 5 * time.Second,
 	}
 
 	var status []string
@@ -49,13 +46,10 @@ func TestConnectClustersNilStatus(t *testing.T) {
 	srv := testutil.StartServer(t)
 	url := srv.ClientURL()
 
-	cfg, err := NewBaseConfig(BaseConfigInput{
+	cfg := BaseConfig{
 		SourceURL: url,
 		DestURL:   url,
 		Workers:   1,
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	clusters, err := ConnectClusters(cfg, nil)

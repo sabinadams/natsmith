@@ -16,14 +16,14 @@ import (
 func BaseConfig(t *testing.T, sourceURL, destURL string) migration.BaseConfig {
 	t.Helper()
 
-	cfg, err := migration.NewBaseConfig(migration.BaseConfigInput{
-		SourceURL:  sourceURL,
-		DestURL:    destURL,
-		Workers:    1,
-		NoProgress: true,
-		Timeout:    30 * time.Second,
-	})
-	if err != nil {
+	cfg := migration.BaseConfig{
+		SourceURL:      sourceURL,
+		DestURL:        destURL,
+		Workers:        1,
+		NoProgress:     true,
+		RequestTimeout: 30 * time.Second,
+	}
+	if err := migration.ValidateBaseConfig(cfg); err != nil {
 		t.Fatalf("base config: %v", err)
 	}
 	return cfg

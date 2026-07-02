@@ -90,13 +90,14 @@ internal/nats/, progress/, workpool/   generic libraries
 ### Internal package layout
 
 ```
-internal/migration/     config.go, summary.go, errors.go, cluster.go, run.go
+internal/migration/     config.go, cluster.go, summary.go
 internal/kv/            buckets.go, snapshot.go, copy.go, verify.go, report.go
 internal/objects/       buckets.go, snapshot.go, filter.go, copy.go, report.go
-internal/nats/          NATS/JetStream connection
+internal/nats/          conn.go, context.go — connect + NATS CLI context loading
 internal/progress/      stderr progress UI
 internal/workpool/      parallel worker pool
-internal/testutil/      test helpers
+internal/testutil/      unit test helpers
+internal/integration/   cross-cluster integration test helpers
 ```
 
 | File | Responsibility |
@@ -120,15 +121,16 @@ cmd/migrate/                  ← "natsmith migrate …"
   kv.go
   objects.go
 
-internal/nats/                ← NATS/JetStream connection (reusable)
+internal/nats/                ← connect + NATS CLI context loading (conn.go, context.go)
 internal/workpool/            ← parallel worker pool (reusable)
 internal/progress/            ← stderr progress UI (reusable)
 internal/migration/           ← shared config, cluster connect, summary, exit codes
-  config.go, summary.go, errors.go, cluster.go, run.go
+  config.go, cluster.go, summary.go
 internal/kv/                  ← KV buckets.go, snapshot.go, copy.go, verify.go, report.go
 internal/objects/             ← objects buckets.go, snapshot.go, filter.go, copy.go, report.go
 
-internal/testutil/            ← test helpers
+internal/testutil/            ← unit test helpers
+internal/integration/         ← integration test cluster helpers
 ```
 
 Only paths under `cmd/` mirror CLI commands (`natsmith migrate kv`, etc.). Packages under `internal/` are implementation — folder names describe domain or libraries, not user-facing subcommands.

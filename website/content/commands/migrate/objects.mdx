@@ -11,8 +11,8 @@ Copies object blobs and recreates link objects in a second pass.
 | Destination buckets | Opens existing buckets only — does not create or set descriptions |
 | Scan | Full `OBJ_<bucket>` stream for meta, then `GetInfo` probe per candidate |
 | Omitted objects | Meta exists but data is not retrievable (common on legacy buckets) |
-| Timeouts | Each copy uses at least 5 minutes; raise `-timeout` for large files |
-| Concurrency | Lower `-workers` (e.g. 8) for buckets with very large objects |
+| Timeouts | Each copy uses at least 5 minutes; raise `--timeout` for large files |
+| Concurrency | Lower `--workers` (e.g. 8) for buckets with very large objects |
 
 **Dry-run output:** `listed`, `meta-active`, `meta-omitted` per bucket.
 
@@ -24,63 +24,50 @@ No verify mode (unlike KV). See the [migrate overview](/commands/migrate) for ru
 
 ### Connection
 
-Required on every run. These are persistent flags on `migrate`:
-
-| Flag | Required | Example |
-|------|----------|---------|
-| `-source-url` | yes | `nats://source.example.com:4222` |
-| `-dest-url` | yes | `nats://dest.example.com:4222` |
-| `-source-creds` | when source uses `.creds` | `/path/to/source.creds` |
-| `-dest-creds` | when destination uses `.creds` | `/path/to/dest.creds` |
+Same connection flags as [`migrate kv`](/commands/migrate/kv).
 
 ### Shared
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-bucket` | all | Comma-separated buckets to migrate |
-| `-omit` | — | Comma-separated buckets to skip |
-| `-dry-run` | `false` | List buckets and records without writing |
-| `-skip-existing` | `false` | Skip records that already exist on destination |
-| `-workers` | `1` | Concurrent workers (1–64) |
-| `-timeout` | `30s` | Per-request NATS timeout |
-| `-no-progress` | `false` | Plain log output (useful in CI) |
+| `--bucket` | all | Comma-separated buckets to migrate |
+| `--omit` | — | Comma-separated buckets to skip |
+| `--dry-run` | `false` | List buckets and records without writing |
+| `--skip-existing` | `false` | Skip records that already exist on destination |
+| `--workers` | `1` | Concurrent workers (1–64) |
+| `--timeout` | `30s` | Per-request NATS timeout |
+| `--no-progress` | `false` | Plain log output (useful in CI) |
 
-Use `-bucket` to select buckets, `-omit` to exclude them, or both (`-bucket` first, then `-omit` removes from that set).
+Use `--bucket` to select buckets, `--omit` to exclude them, or both (`--bucket` first, then `--omit` removes from that set).
 
 ## Examples
 
 ### Dry-run all buckets
 
 ```bash
-natsmith migrate objects -dry-run \
-  -source-url nats://source.example.com:4222 \
-  -source-creds /path/to/source.creds \
-  -dest-url nats://dest.example.com:4222 \
-  -dest-creds /path/to/dest.creds \
-  -workers 16
+natsmith migrate objects --dry-run \
+  --source-context sandbox-legacy \
+  --dest-context sandbox \
+  --workers 16
 ```
 
 ### Migrate all buckets
 
 ```bash
 natsmith migrate objects \
-  -source-url nats://source.example.com:4222 \
-  -source-creds /path/to/source.creds \
-  -dest-url nats://dest.example.com:4222 \
-  -dest-creds /path/to/dest.creds \
-  -workers 16 \
-  -timeout 5m
+  --source-context sandbox-legacy \
+  --dest-context sandbox \
+  --workers 16 \
+  --timeout 5m
 ```
 
 ### Migrate one bucket
 
 ```bash
 natsmith migrate objects \
-  -source-url nats://source.example.com:4222 \
-  -source-creds /path/to/source.creds \
-  -dest-url nats://dest.example.com:4222 \
-  -dest-creds /path/to/dest.creds \
-  -bucket my-bucket \
-  -workers 16 \
-  -timeout 5m
+  --source-context sandbox-legacy \
+  --dest-context sandbox \
+  --bucket my-bucket \
+  --workers 16 \
+  --timeout 5m
 ```

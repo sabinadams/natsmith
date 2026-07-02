@@ -67,10 +67,8 @@ Requires Go 1.25+. Use `go run` and pass the subcommand after `--`:
 
 ```bash
 go run github.com/sabinadams/natsmith/cmd/natsmith@latest -- migrate kv -dry-run \
-  -source-url nats://source.example.com:4222 \
-  -source-creds /path/to/source.creds \
-  -dest-url nats://dest.example.com:4222 \
-  -dest-creds /path/to/dest.creds
+  --source-context sandbox-legacy \
+  --dest-context sandbox
 ```
 
 ## Updating

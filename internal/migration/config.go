@@ -38,17 +38,15 @@ type ObjectConfig struct {
 
 // BaseConfigInput holds raw flag values for building a BaseConfig.
 type BaseConfigInput struct {
-	SourceURL    string
-	DestURL      string
-	SourceCreds  string
-	DestCreds    string
-	BucketFilter string
-	OmitFilter   string
-	DryRun       bool
-	SkipExisting bool
-	NoProgress   bool
-	Workers      int
-	Timeout      time.Duration
+	SourceContext string
+	DestContext   string
+	BucketFilter  string
+	OmitFilter    string
+	DryRun        bool
+	SkipExisting  bool
+	NoProgress    bool
+	Workers       int
+	Timeout       time.Duration
 }
 
 func (c *BaseConfig) ShouldMigrateBucket(name string) bool {
@@ -86,11 +84,21 @@ func NewBaseConfig(in BaseConfigInput) (BaseConfig, error) {
 		timeout = nats.DefaultRequestTimeout
 	}
 
+	sourceURL, sourceCreds, err := resolveContext("source", in.SourceContext)
+	if err != nil {
+		return BaseConfig{}, err
+	}
+
+	destURL, destCreds, err := resolveContext("dest", in.DestContext)
+	if err != nil {
+		return BaseConfig{}, err
+	}
+
 	cfg := BaseConfig{
-		SourceURL:      strings.TrimSpace(in.SourceURL),
-		DestURL:        strings.TrimSpace(in.DestURL),
-		SourceCreds:    strings.TrimSpace(in.SourceCreds),
-		DestCreds:      strings.TrimSpace(in.DestCreds),
+		SourceURL:      sourceURL,
+		DestURL:        destURL,
+		SourceCreds:    sourceCreds,
+		DestCreds:      destCreds,
 		DryRun:         in.DryRun,
 		SkipExisting:   in.SkipExisting,
 		NoProgress:     in.NoProgress,
@@ -133,7 +141,7 @@ func NewObjectConfig(base BaseConfig) ObjectConfig {
 // ValidateBaseConfig checks required migration settings.
 func ValidateBaseConfig(cfg BaseConfig) error {
 	if cfg.SourceURL == "" || cfg.DestURL == "" {
-		return fmt.Errorf("source-url and dest-url are required")
+		return fmt.Errorf("source-context and dest-context are required")
 	}
 	return nil
 }
@@ -147,4 +155,21 @@ func ClampWorkers(workers int) (int, error) {
 		return 64, nil
 	}
 	return workers, nil
+}
+
+func resolveContext(label, name string) (url, creds string, err error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", "", fmt.Errorf("%s-context is required", label)
+	}
+
+	ctx, err := nats.LoadContext(name)
+	if err != nil {
+		return "", "", fmt.Errorf("%s-context: %w", label, err)
+	}
+	if ctx.URL == "" {
+		return "", "", fmt.Errorf("%s-context %q has no url", label, name)
+	}
+
+	return ctx.URL, ctx.Creds, nil
 }

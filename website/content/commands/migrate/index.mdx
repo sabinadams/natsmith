@@ -15,11 +15,15 @@ Copy JetStream **KV buckets** and **object stores** from a source cluster to a d
 | [`kv`](/commands/migrate/kv) | Copy KV buckets and verify byte-for-byte |
 | [`objects`](/commands/migrate/objects) | Copy object store buckets |
 
-Connection flags (`-source-url`, `-dest-url`, credentials) are persistent on `migrate` — pass them after the subcommand:
+Connection flags are persistent on `migrate` — pass them after the subcommand:
 
 ```bash
-natsmith migrate kv -source-url … -dest-url … -dry-run
+natsmith migrate kv --dry-run \
+  --source-context sandbox-legacy \
+  --dest-context sandbox
 ```
+
+Contexts are [NATS CLI contexts](https://docs.nats.io/using-nats/nats-tools/nats_cli/context) in `~/.config/nats/context/` — each supplies the server URL and creds for that cluster.
 
 ## At a glance
 
@@ -28,7 +32,7 @@ natsmith migrate kv -source-url … -dest-url … -dry-run
 | **Source** | Read-only — scans streams, never deletes source data |
 | **Destination** | Copies matching records; does **not** remove extra keys or objects on dest |
 | **Buckets** | Must already exist on destination (e.g. Terraform) |
-| **Credentials** | Source: read · Destination: write (`.creds` files) |
+| **Credentials** | From each NATS CLI context (source: read · destination: write) |
 
 ## How it works
 
@@ -52,11 +56,13 @@ Step-by-step order for a production migration:
 
 | Step | Command |
 |------|---------|
-| 1 | `natsmith migrate kv -dry-run …` — inspect KV buckets and key counts |
-| 2 | `natsmith migrate objects -dry-run …` — inspect object stores |
-| 3 | `natsmith migrate kv -bucket my-bucket …` — pilot one KV bucket |
-| 4 | `natsmith migrate kv -verify-only -bucket my-bucket …` — confirm that bucket |
-| 5 | `natsmith migrate kv … -failures-file kv-failures.log` — full KV migration |
-| 6 | `natsmith migrate objects … -timeout 5m` — full object migration |
+| 1 | `natsmith migrate kv --dry-run …` — inspect KV buckets and key counts |
+| 2 | `natsmith migrate objects --dry-run …` — inspect object stores |
+| 3 | `natsmith migrate kv --bucket my-bucket …` — pilot one KV bucket |
+| 4 | `natsmith migrate kv --verify-only --bucket my-bucket …` — confirm that bucket |
+| 5 | `natsmith migrate kv … --failures-file kv-failures.log` — full KV migration |
+| 6 | `natsmith migrate objects … --timeout 5m` — full object migration |
+
+(`…` = `--source-context` and `--dest-context`.)
 
 Ensure destination buckets exist before step 3. See [`migrate kv`](/commands/migrate/kv) and [`migrate objects`](/commands/migrate/objects) for flags and examples.

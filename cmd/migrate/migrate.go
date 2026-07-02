@@ -14,17 +14,15 @@ var migrateCmd = &cobra.Command{
 }
 
 type sharedFlags struct {
-	sourceURL    string
-	destURL      string
-	sourceCreds  string
-	destCreds    string
-	bucket       string
-	omit         string
-	dryRun       bool
-	skipExisting bool
-	noProgress   bool
-	workers      int
-	timeout      time.Duration
+	sourceContext string
+	destContext   string
+	bucket        string
+	omit          string
+	dryRun        bool
+	skipExisting  bool
+	noProgress    bool
+	workers       int
+	timeout       time.Duration
 }
 
 var shared sharedFlags
@@ -36,10 +34,8 @@ func Command() *cobra.Command {
 
 func init() {
 	flags := migrateCmd.PersistentFlags()
-	flags.StringVar(&shared.sourceURL, "source-url", "", "source NATS server URL (required)")
-	flags.StringVar(&shared.destURL, "dest-url", "", "destination NATS server URL (required)")
-	flags.StringVar(&shared.sourceCreds, "source-creds", "", "source credentials file (.creds)")
-	flags.StringVar(&shared.destCreds, "dest-creds", "", "destination credentials file (.creds)")
+	flags.StringVar(&shared.sourceContext, "source-context", "", "source NATS CLI context name")
+	flags.StringVar(&shared.destContext, "dest-context", "", "destination NATS CLI context name")
 	flags.StringVar(&shared.bucket, "bucket", "", "comma-separated bucket names to migrate (default: all)")
 	flags.StringVar(&shared.omit, "omit", "", "comma-separated bucket names to skip")
 	flags.BoolVar(&shared.dryRun, "dry-run", false, "list buckets and records without writing to destination")
@@ -48,22 +44,20 @@ func init() {
 	flags.IntVar(&shared.workers, "workers", 1, "number of concurrent workers for copying records (1-64)")
 	flags.DurationVar(&shared.timeout, "timeout", nats.DefaultRequestTimeout, "per-request timeout for NATS JetStream API calls")
 
-	_ = migrateCmd.MarkPersistentFlagRequired("source-url")
-	_ = migrateCmd.MarkPersistentFlagRequired("dest-url")
+	_ = migrateCmd.MarkPersistentFlagRequired("source-context")
+	_ = migrateCmd.MarkPersistentFlagRequired("dest-context")
 }
 
 func sharedBaseConfig() (migration.BaseConfig, error) {
 	return migration.NewBaseConfig(migration.BaseConfigInput{
-		SourceURL:    shared.sourceURL,
-		DestURL:      shared.destURL,
-		SourceCreds:  shared.sourceCreds,
-		DestCreds:    shared.destCreds,
-		BucketFilter: shared.bucket,
-		OmitFilter:   shared.omit,
-		DryRun:       shared.dryRun,
-		SkipExisting: shared.skipExisting,
-		NoProgress:   shared.noProgress,
-		Workers:      shared.workers,
-		Timeout:      shared.timeout,
+		SourceContext: shared.sourceContext,
+		DestContext:   shared.destContext,
+		BucketFilter:  shared.bucket,
+		OmitFilter:    shared.omit,
+		DryRun:        shared.dryRun,
+		SkipExisting:  shared.skipExisting,
+		NoProgress:    shared.noProgress,
+		Workers:       shared.workers,
+		Timeout:       shared.timeout,
 	})
 }

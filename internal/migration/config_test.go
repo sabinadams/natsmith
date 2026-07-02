@@ -1,8 +1,12 @@
 package migration
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/sabinadams/natsmith/internal/nats"
 )
 
 func TestParseBucketNames(t *testing.T) {
@@ -72,30 +76,109 @@ func TestClampWorkers(t *testing.T) {
 	}
 }
 
-func TestNewBaseConfig(t *testing.T) {
+func writeTestContexts(t *testing.T) {
+	t.Helper()
+
+	dir := t.TempDir()
+	ctxDir := filepath.Join(dir, "nats", "context")
+	if err := os.MkdirAll(ctxDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ctxDir, "source.json"), []byte(`{"url":"nats://source:4222","creds":"source.creds"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ctxDir, "dest.json"), []byte(`{"url":"nats://dest:4222","creds":"dest.creds"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", dir)
+}
+
+func TestResolveContext(t *testing.T) {
+	writeTestContexts(t)
+
+	url, creds, err := resolveContext("source", "source")
+	if err != nil {
+		t.Fatalf("resolveContext: %v", err)
+	}
+	if url != "nats://source:4222" || creds != "source.creds" {
+		t.Fatalf("got url=%q creds=%q", url, creds)
+	}
+}
+
+func TestResolveContextRequiresName(t *testing.T) {
 	t.Parallel()
 
+	if _, _, err := resolveContext("dest", ""); err == nil {
+		t.Fatal("expected error for missing context name")
+	}
+}
+
+func TestResolveContextUnknown(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "nats", "context"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	if _, _, err := resolveContext("source", "missing"); err == nil {
+		t.Fatal("expected error for unknown context")
+	}
+}
+
+func TestResolveContextEmptyURL(t *testing.T) {
+	dir := t.TempDir()
+	ctxDir := filepath.Join(dir, "nats", "context")
+	if err := os.MkdirAll(ctxDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ctxDir, "empty.json"), []byte(`{"url":"","creds":""}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	if _, _, err := resolveContext("dest", "empty"); err == nil {
+		t.Fatal("expected error for empty url")
+	}
+}
+
+func TestNewBaseConfigDefaultTimeout(t *testing.T) {
+	writeTestContexts(t)
+
 	cfg, err := NewBaseConfig(BaseConfigInput{
-		SourceURL:    " nats://source ",
-		DestURL:      "nats://dest",
-		SourceCreds:  " src.creds ",
-		DestCreds:    "dest.creds",
-		BucketFilter: "a,b",
-		OmitFilter:   "c",
-		DryRun:       true,
-		SkipExisting: true,
-		NoProgress:   true,
-		Workers:      8,
-		Timeout:      45 * time.Second,
+		SourceContext: "source",
+		DestContext:   "dest",
+		Workers:       1,
 	})
 	if err != nil {
 		t.Fatalf("NewBaseConfig: %v", err)
 	}
-	if cfg.SourceURL != "nats://source" || cfg.DestURL != "nats://dest" {
-		t.Fatalf("urls not trimmed: %+v", cfg)
+	if cfg.RequestTimeout != nats.DefaultRequestTimeout {
+		t.Fatalf("timeout = %v, want default", cfg.RequestTimeout)
 	}
-	if cfg.SourceCreds != "src.creds" || cfg.DestCreds != "dest.creds" {
-		t.Fatalf("creds not trimmed: %+v", cfg)
+}
+
+func TestNewBaseConfig(t *testing.T) {
+	writeTestContexts(t)
+
+	cfg, err := NewBaseConfig(BaseConfigInput{
+		SourceContext: "source",
+		DestContext:   "dest",
+		BucketFilter:  "a,b",
+		OmitFilter:    "c",
+		DryRun:        true,
+		SkipExisting:  true,
+		NoProgress:    true,
+		Workers:       8,
+		Timeout:       45 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("NewBaseConfig: %v", err)
+	}
+	if cfg.SourceURL != "nats://source:4222" || cfg.DestURL != "nats://dest:4222" {
+		t.Fatalf("urls from context: %+v", cfg)
+	}
+	if cfg.SourceCreds != "source.creds" || cfg.DestCreds != "dest.creds" {
+		t.Fatalf("creds from context: %+v", cfg)
 	}
 	if !cfg.DryRun || !cfg.SkipExisting || !cfg.NoProgress {
 		t.Fatalf("bools not set: %+v", cfg)
@@ -128,24 +211,21 @@ func TestValidateBaseConfig(t *testing.T) {
 	}
 }
 
-func TestNewBaseConfigRequiresURLs(t *testing.T) {
+func TestNewBaseConfigRequiresContexts(t *testing.T) {
 	t.Parallel()
 
-	if _, err := NewBaseConfig(BaseConfigInput{}); err == nil {
-		t.Fatal("expected error for missing URLs")
+	if _, err := NewBaseConfig(BaseConfigInput{Workers: 1}); err == nil {
+		t.Fatal("expected error for missing contexts")
 	}
 }
 
 func TestNewKVConfigVerifyOnly(t *testing.T) {
 	t.Parallel()
 
-	base, err := NewBaseConfig(BaseConfigInput{
+	base := BaseConfig{
 		SourceURL: "nats://source",
 		DestURL:   "nats://dest",
 		Workers:   1,
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	cfg := NewKVConfig(base, false, true, "")
@@ -157,13 +237,10 @@ func TestNewKVConfigVerifyOnly(t *testing.T) {
 func TestNewObjectConfig(t *testing.T) {
 	t.Parallel()
 
-	base, err := NewBaseConfig(BaseConfigInput{
+	base := BaseConfig{
 		SourceURL: "nats://source",
 		DestURL:   "nats://dest",
 		Workers:   4,
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	cfg := NewObjectConfig(base)
