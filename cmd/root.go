@@ -11,7 +11,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "natsmith",
-	Short: "Unofficial NATS and JetStream migration toolkit",
+	Short: "CLI tooling for NATS and JetStream",
 	Long:  "Unofficial CLI toolkit for NATS and JetStream. Not affiliated with Synadia.",
 }
 

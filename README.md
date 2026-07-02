@@ -1,13 +1,13 @@
 # natsmith
 
-> Migrate JetStream KV buckets and object stores between NATS clusters — with verification built in.
+> CLI tooling for NATS and JetStream. Currently: migrate KV buckets and object stores between clusters — with verification built in.
 
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://sabinadams.github.io/natsmith/)
 [![Go](https://img.shields.io/badge/go-1.25+-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/sabinadams/natsmith?sort=semver)](https://github.com/sabinadams/natsmith/releases)
 
-Unofficial CLI for [NATS](https://nats.io) JetStream migrations. Not affiliated with Synadia.
+Unofficial CLI for [NATS](https://nats.io) and JetStream. Not affiliated with Synadia.
 
 ## Documentation
 

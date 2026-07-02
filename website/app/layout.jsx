@@ -9,7 +9,7 @@ export const metadata = {
     template: '%s – natsmith',
   },
   description:
-    'Migrate JetStream KV buckets and object stores between NATS clusters.',
+    'CLI tooling for NATS and JetStream.',
 }
 
 export default async function RootLayout({ children }) {
