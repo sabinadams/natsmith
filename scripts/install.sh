@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 # Install natsmith from GitHub Releases.
-# Usage: curl -fsSL https://natsmith.dev/install.sh | sh
-#    or: curl -fsSL https://sabinadams.github.io/natsmith/install.sh | sh
+# Usage: curl -fsSL https://sabinadams.github.io/natsmith/install.sh | sh
 
 set -e
 

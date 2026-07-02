@@ -251,12 +251,12 @@ Each platform archive contains the `natsmith` binary.
 
 | Method | Command |
 |--------|---------|
-| Install script | `curl -fsSL https://natsmith.dev/install.sh \| sh` |
+| Install script | `curl -fsSL https://sabinadams.github.io/natsmith/install.sh \| sh` |
 | Homebrew | `brew install sabinadams/natsmith/natsmith` |
 | GitHub Releases | Download from [Releases](https://github.com/sabinadams/natsmith/releases) |
 | Go | `go install github.com/sabinadams/natsmith/cmd/natsmith@latest` |
 
-The install script is also hosted at `https://sabinadams.github.io/natsmith/install.sh` (see [`scripts/install.sh`](scripts/install.sh)).
+The install script lives in [`scripts/install.sh`](scripts/install.sh) and is published at `https://sabinadams.github.io/natsmith/install.sh`.
 
 ### Validate GoReleaser config locally (optional)
 

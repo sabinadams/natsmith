@@ -24,7 +24,7 @@ Unofficial CLI for [NATS](https://nats.io) and JetStream. Not affiliated with Sy
 **Install script** (macOS & Linux, no Go required):
 
 ```bash
-curl -fsSL https://natsmith.dev/install.sh | sh
+curl -fsSL https://sabinadams.github.io/natsmith/install.sh | sh
 ```
 
 **Homebrew:**
