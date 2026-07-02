@@ -27,6 +27,14 @@ go install github.com/sabinadams/natsmith/cmd/migrate-nats-objects@latest
 
 Ensure `$(go env GOPATH)/bin` is on your `PATH`.
 
+**Private repository:** If this repo is private, configure Go to fetch it directly:
+
+```bash
+go env -w GOPRIVATE=github.com/sabinadams/natsmith
+```
+
+You also need GitHub SSH or HTTPS credentials that can read the repo. Public clones can skip `GOPRIVATE`.
+
 Pin a release:
 
 ```bash
