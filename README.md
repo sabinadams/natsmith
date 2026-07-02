@@ -21,19 +21,21 @@ Unofficial CLI for [NATS](https://nats.io) and JetStream. Not affiliated with Sy
 
 ## Install
 
-**Install script** (macOS & Linux, no Go required):
+Pre-built installs do not require Go:
+
+**Install script** (macOS & Linux):
 
 ```bash
 curl -fsSL https://sabinadams.github.io/natsmith/install.sh | sh
 ```
 
-**Homebrew:**
+**Homebrew** (macOS & Linux):
 
 ```bash
 brew install sabinadams/natsmith/natsmith
 ```
 
-**Go** (requires Go 1.25+):
+**Go** (optional, requires Go 1.25+):
 
 ```bash
 export PATH="$(go env GOPATH)/bin:$PATH"

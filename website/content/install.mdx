@@ -2,9 +2,11 @@
 
 natsmith is a **global CLI** — install once and run from any directory. It is not a project dependency.
 
+Pre-built binaries are available for macOS, Linux, and Windows. **Go is not required** unless you use [`go install`](#with-go) or [`go run`](#run-without-installing) below.
+
 ## Install script (macOS & Linux)
 
-No Go required. Downloads the latest release binary from GitHub:
+Downloads the latest release binary from GitHub:
 
 ```bash
 curl -fsSL https://sabinadams.github.io/natsmith/install.sh | sh
@@ -19,8 +21,6 @@ INSTALL_DIR="$HOME/.local/bin" curl -fsSL https://sabinadams.github.io/natsmith/
 Ensure that directory is on your `PATH`.
 
 ## Homebrew (macOS & Linux)
-
-No Go required:
 
 ```bash
 brew install sabinadams/natsmith/natsmith
