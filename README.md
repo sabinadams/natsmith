@@ -1,6 +1,6 @@
 # natsmith
 
-> CLI tooling for NATS and JetStream. Currently: migrate KV buckets and object stores between clusters — with verification built in.
+> CLI tooling for NATS and JetStream.
 
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://sabinadams.github.io/natsmith/)
 [![Go](https://img.shields.io/badge/go-1.25+-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
