@@ -2,6 +2,8 @@ module github.com/sabinadams/natsmith
 
 go 1.25.0
 
+retract v0.1.0 // pre-unified CLI; missing cmd/natsmith
+
 require (
 	github.com/docker/docker v28.5.1+incompatible
 	github.com/nats-io/nats-server/v2 v2.14.3
