@@ -2,9 +2,57 @@
 
 natsmith is a **global CLI** — install once and run from any directory. It is not a project dependency.
 
-## With Go (recommended)
+## Install script (macOS & Linux)
 
-Requires Go 1.25+. Put Go's bin directory on your `PATH` first — otherwise `go install` succeeds but `natsmith` is not found:
+No Go required. Downloads the latest release binary from GitHub:
+
+```bash
+curl -fsSL https://natsmith.dev/install.sh | sh
+```
+
+If `natsmith.dev` is not configured yet, use the copy hosted with the docs site:
+
+```bash
+curl -fsSL https://sabinadams.github.io/natsmith/install.sh | sh
+```
+
+Install to a different directory:
+
+```bash
+INSTALL_DIR="$HOME/.local/bin" curl -fsSL https://natsmith.dev/install.sh | sh
+```
+
+Ensure that directory is on your `PATH`.
+
+## Homebrew (macOS & Linux)
+
+No Go required:
+
+```bash
+brew install sabinadams/natsmith/natsmith
+```
+
+The formula is updated automatically on each release.
+
+## GitHub Releases
+
+Download a platform archive from [GitHub Releases](https://github.com/sabinadams/natsmith/releases). Each archive contains the `natsmith` binary. Verify downloads with `checksums.txt`.
+
+**macOS (arm64) example:**
+
+```bash
+VERSION=v0.2.0
+curl -LO "https://github.com/sabinadams/natsmith/releases/download/${VERSION}/natsmith_${VERSION#v}_darwin_arm64.tar.gz"
+tar xzf "natsmith_${VERSION#v}_darwin_arm64.tar.gz"
+chmod +x natsmith
+sudo mv natsmith /usr/local/bin/
+```
+
+Windows releases are `.zip` archives — put `natsmith.exe` on your `PATH`.
+
+## With Go
+
+For Go developers who already have Go 1.25+ installed:
 
 ```bash
 export PATH="$(go env GOPATH)/bin:$PATH"   # add to ~/.zshrc or ~/.bashrc to persist
@@ -16,12 +64,12 @@ natsmith migrate kv -h
 Pin a release:
 
 ```bash
-go install github.com/sabinadams/natsmith/cmd/natsmith@v0.1.0
+go install github.com/sabinadams/natsmith/cmd/natsmith@v0.2.0
 ```
 
 ## Run without installing
 
-Use `go run` and pass the subcommand after `--`:
+Requires Go 1.25+. Use `go run` and pass the subcommand after `--`:
 
 ```bash
 go run github.com/sabinadams/natsmith/cmd/natsmith@latest -- migrate kv -dry-run \
@@ -31,27 +79,19 @@ go run github.com/sabinadams/natsmith/cmd/natsmith@latest -- migrate kv -dry-run
   -dest-creds /path/to/dest.creds
 ```
 
-## Pre-built binaries
+## Updating
 
-No Go required. Download an archive from [GitHub Releases](https://github.com/sabinadams/natsmith/releases). Each archive contains the `natsmith` binary. Verify downloads with `checksums.txt`.
-
-**macOS (arm64) example:**
+Re-run the [install script](#install-script-macos--linux) or:
 
 ```bash
-VERSION=v0.1.0
-curl -LO "https://github.com/sabinadams/natsmith/releases/download/${VERSION}/natsmith_${VERSION#v}_darwin_arm64.tar.gz"
-tar xzf "natsmith_${VERSION#v}_darwin_arm64.tar.gz"
-chmod +x natsmith
-sudo mv natsmith /usr/local/bin/
+brew upgrade natsmith
 ```
 
-Windows releases are `.zip` archives — put `natsmith.exe` on your `PATH`.
-
-## Updating
+Go users:
 
 ```bash
 go install github.com/sabinadams/natsmith/cmd/natsmith@latest
 go version -m "$(command -v natsmith)"
 ```
 
-For pre-built binaries, download the newer release and replace the file on your `PATH`.
+For manual GitHub Release installs, download the newer archive and replace the binary on your `PATH`.

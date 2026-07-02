@@ -36,6 +36,18 @@ checksum:
 changelog:
   sort: asc
 
+brews:
+  - name: natsmith
+    repository:
+      owner: sabinadams
+      name: natsmith
+    directory: Formula
+    homepage: "https://sabinadams.github.io/natsmith/"
+    description: "CLI tooling for NATS and JetStream"
+    license: "MIT"
+    test: |
+      system "#{bin}/natsmith", "-h"
+
 release:
   github:
     owner: sabinadams

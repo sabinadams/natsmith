@@ -19,12 +19,32 @@ Unofficial CLI for [NATS](https://nats.io) and JetStream. Not affiliated with Sy
 - [migrate objects](https://sabinadams.github.io/natsmith/commands/migrate/objects/)
 - [Troubleshooting](https://sabinadams.github.io/natsmith/troubleshooting/)
 
-## Quick start
+## Install
+
+**Install script** (macOS & Linux, no Go required):
+
+```bash
+curl -fsSL https://natsmith.dev/install.sh | sh
+```
+
+**Homebrew:**
+
+```bash
+brew install sabinadams/natsmith/natsmith
+```
+
+**Go** (requires Go 1.25+):
 
 ```bash
 export PATH="$(go env GOPATH)/bin:$PATH"
 go install github.com/sabinadams/natsmith/cmd/natsmith@latest
+```
 
+See the [Install](https://sabinadams.github.io/natsmith/install/) page for GitHub Release downloads and other options.
+
+## Quick start
+
+```bash
 natsmith migrate kv -dry-run \
   -source-url nats://source.example.com:4222 \
   -source-creds /path/to/source.creds \

@@ -234,6 +234,7 @@ Publishing creates the tag on GitHub. That triggers the [Release workflow](.gith
 1. Run `go mod tidy` and `go test ./...`
 2. Cross-compile the `natsmith` binary for linux, darwin, and windows (amd64 and arm64)
 3. Attach platform archives and `checksums.txt` to the GitHub release you just created
+4. Update the Homebrew formula in [`Formula/natsmith.rb`](Formula/natsmith.rb) (install via `brew install sabinadams/natsmith/natsmith`)
 
 Write release notes in the UI before publishing. The workflow adds binaries afterward — it does not replace your notes.
 
@@ -243,10 +244,19 @@ Each platform archive contains the `natsmith` binary.
 
 | Platform | Archive format | Example filename |
 |----------|----------------|------------------|
-| macOS / Linux | `.tar.gz` | `natsmith_0.1.1_darwin_arm64.tar.gz` |
-| Windows | `.zip` | `natsmith_0.1.1_windows_amd64.zip` |
+| macOS / Linux | `.tar.gz` | `natsmith_0.2.0_darwin_arm64.tar.gz` |
+| Windows | `.zip` | `natsmith_0.2.0_windows_amd64.zip` |
 
-Users install from releases as documented in the [README](README.md#option-3-pre-built-binaries). Go users can also `go install github.com/sabinadams/natsmith/cmd/natsmith@latest` once the tag exists.
+### How users install
+
+| Method | Command |
+|--------|---------|
+| Install script | `curl -fsSL https://natsmith.dev/install.sh \| sh` |
+| Homebrew | `brew install sabinadams/natsmith/natsmith` |
+| GitHub Releases | Download from [Releases](https://github.com/sabinadams/natsmith/releases) |
+| Go | `go install github.com/sabinadams/natsmith/cmd/natsmith@latest` |
+
+The install script is also hosted at `https://sabinadams.github.io/natsmith/install.sh` (see [`scripts/install.sh`](scripts/install.sh)).
 
 ### Validate GoReleaser config locally (optional)
 
@@ -262,4 +272,4 @@ go run github.com/goreleaser/goreleaser/v2@v2.8.1 build --snapshot --clean
 
 ## How users install and update
 
-End-user install paths (`go install`, `go run`, pre-built binaries) are documented in the [README](README.md#install). Contributors do not need to do anything extra beyond publishing a release — `go install …@latest` and GitHub release downloads pick up new tags automatically.
+End-user install paths are documented on the [Install](https://sabinadams.github.io/natsmith/install/) page (`curl` install script, Homebrew, GitHub Releases, and `go install`). Contributors publish a semver tag — GoReleaser attaches binaries and updates the Homebrew formula automatically.

@@ -44,10 +44,9 @@ See [Recommended workflow](/workflow) before a production migration.
 
 ## Quick start
 
-```bash
-export PATH="$(go env GOPATH)/bin:$PATH"
-go install github.com/sabinadams/natsmith/cmd/natsmith@latest
+After [installing](/install):
 
+```bash
 natsmith migrate kv -dry-run \
   -source-url nats://source.example.com:4222 \
   -source-creds /path/to/source.creds \
