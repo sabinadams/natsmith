@@ -90,7 +90,7 @@ internal/nats/, progress/, workpool/   generic libraries
 
 ```
 internal/migration/     config.go, cluster.go, summary.go, buckets.go
-internal/kv/            buckets.go, run_bucket.go, verify.go, report.go
+internal/kv/            buckets.go, run_bucket.go, stream.go, verify.go, report.go
 internal/objects/       buckets.go, snapshot.go, filter.go, copy.go, report.go
 internal/report/        shared stderr message formatting
 internal/nats/          conn.go, context.go — connect + NATS CLI context loading
@@ -118,6 +118,12 @@ cmd/migrate/                  ← "natsmith migrate …"
   migrate.go                  ← group + shared flags
   kv.go
   objects.go
+cmd/backup/                   ← "natsmith backup …"
+  backup.go, backup_test.go
+  kv.go, kv_test.go
+cmd/restore/                  ← "natsmith restore …"
+  restore.go, restore_test.go
+  kv.go, kv_test.go
 
 internal/nats/                ← connect + NATS CLI context loading (conn.go, context.go)
 internal/workpool/            ← parallel worker pool (reusable)
@@ -125,7 +131,7 @@ internal/progress/            ← stderr progress UI (reusable)
 internal/migration/           ← shared config, cluster connect, summary, exit codes, bucket filtering
   config.go, cluster.go, summary.go, buckets.go
 internal/report/              ← shared stderr message formatting
-internal/kv/                  ← KV buckets.go, run_bucket.go, verify.go, report.go
+internal/kv/                  ← KV buckets.go, run_bucket.go, stream.go, verify.go, report.go
 internal/objects/             ← objects buckets.go, snapshot.go, filter.go, copy.go, report.go
 
 internal/testutil/            ← unit test helpers

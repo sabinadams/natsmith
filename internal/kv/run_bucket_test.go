@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"context"
 	"testing"
 
 	"github.com/nats-io/nats.go/jetstream"
@@ -158,6 +159,87 @@ func TestRunBucketSkipExisting(t *testing.T) {
 	}
 	if string(shared.Value()) != "dest" {
 		t.Fatalf("shared = %q, want dest value preserved", shared.Value())
+	}
+}
+
+type ghostKeyLister struct {
+	real    jetstream.KeyLister
+	phantom string
+}
+
+func (g *ghostKeyLister) Keys() <-chan string {
+	ch := make(chan string)
+	go func() {
+		defer close(ch)
+		ch <- g.phantom
+		for key := range g.real.Keys() {
+			ch <- key
+		}
+	}()
+	return ch
+}
+
+func (g *ghostKeyLister) Stop() error {
+	return g.real.Stop()
+}
+
+type ghostSourceKV struct {
+	jetstream.KeyValue
+	phantom string
+}
+
+func (g *ghostSourceKV) ListKeys(ctx context.Context, opts ...jetstream.WatchOpt) (jetstream.KeyLister, error) {
+	real, err := g.KeyValue.ListKeys(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &ghostKeyLister{real: real, phantom: g.phantom}, nil
+}
+
+func TestRunBucketSkipsGhostKeys(t *testing.T) {
+	srv := testutil.StartServer(t)
+	nc := testutil.Connect(t, srv.ClientURL())
+	js := testutil.JetStream(t, nc)
+	ctx := testutil.Context(t)
+
+	source, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "GHOST_SRC"})
+	if err != nil {
+		t.Fatalf("create source: %v", err)
+	}
+	dest, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "GHOST_DEST"})
+	if err != nil {
+		t.Fatalf("create dest: %v", err)
+	}
+
+	if _, err := source.Put(ctx, "real", []byte("ok")); err != nil {
+		t.Fatalf("put: %v", err)
+	}
+
+	sourceWithGhost := &ghostSourceKV{KeyValue: source, phantom: "phantom-key"}
+
+	run, err := runBucketFromSource(ctx, sourceWithGhost, BucketRunParams{
+		Workers: 1,
+		Dest:    dest,
+	}, nil, nil)
+	if err != nil {
+		t.Fatalf("run bucket: %v", err)
+	}
+	if run.Migratable != 2 {
+		t.Fatalf("migratable = %d, want 2", run.Migratable)
+	}
+	if run.GhostSkipped != 1 {
+		t.Fatalf("ghost skipped = %d, want 1", run.GhostSkipped)
+	}
+	if run.Copy.Migrated != 1 {
+		t.Fatalf("copy stats: %+v", run.Copy)
+	}
+
+	entry, err := dest.Get(ctx, "real")
+	if err != nil {
+		t.Fatalf("get real on dest: %v", err)
+	}
+	if string(entry.Value()) != "ok" {
+		t.Fatalf("real = %q, want ok", entry.Value())
 	}
 }
 

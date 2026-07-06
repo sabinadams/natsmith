@@ -31,6 +31,7 @@ type BucketRunParams struct {
 // BucketRunResult summarizes a bucket run.
 type BucketRunResult struct {
 	Migratable      int
+	GhostSkipped    int
 	Copy            progress.ItemStats
 	Verify          VerifyResult
 	DestOnlySkipped bool
@@ -51,6 +52,16 @@ func RunBucket(
 		return BucketRunResult{}, fmt.Errorf("open source kv %q: %w", bucket, err)
 	}
 
+	return runBucketFromSource(ctx, sourceKV, params, report, bar)
+}
+
+func runBucketFromSource(
+	ctx context.Context,
+	sourceKV jetstream.KeyValue,
+	params BucketRunParams,
+	report func(progress.ScanProgress),
+	bar *progress.BucketBar,
+) (BucketRunResult, error) {
 	lister, err := sourceKV.ListKeys(ctx)
 	if err != nil {
 		return BucketRunResult{}, fmt.Errorf("list source keys: %w", err)
@@ -92,6 +103,16 @@ func RunBucket(
 
 			sourceEntry, err := sourceKV.Get(ctx, key)
 			if err != nil {
+				if errors.Is(err, jetstream.ErrKeyNotFound) {
+					statsMu.Lock()
+					result.GhostSkipped++
+					result.Copy.Total--
+					statsMu.Unlock()
+					if bar != nil {
+						bar.Add(1)
+					}
+					return nil
+				}
 				return fmt.Errorf("get source key %q: %w", key, err)
 			}
 			value := bytes.Clone(sourceEntry.Value())
@@ -139,7 +160,7 @@ func RunBucket(
 	reportKeys(result.Migratable)
 
 	if params.Verify && !params.DryRun {
-		result.Verify.Expected = result.Migratable
+		result.Verify.Expected = result.Migratable - result.GhostSkipped
 	}
 
 	if shouldCheckDestOnly(params, result.Migratable) {

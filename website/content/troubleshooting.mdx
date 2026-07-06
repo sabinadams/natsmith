@@ -8,7 +8,7 @@
 | `command not found` after `go install`                             | Add `$(go env GOPATH)/bin` to your `PATH`                                                                                                               |
 | Install script fails to download                                   | No release for your OS/arch, or GitHub API rate limit — try [Homebrew](/install#homebrew-macos--linux) or a [manual download](/install#github-releases) |
 | `brew install sabinadams/natsmith/natsmith` — repository not found | The tap repo was missing; it lives at [homebrew-natsmith](https://github.com/sabinadams/homebrew-natsmith). Re-run the install command                  |
-| `go install …@latest` fails on old tag                             | Use `@v1.1.0` or newer; see [Install](/install#with-go)                                                                                                 |
+| `go install …@latest` fails on old tag                             | Use `@v1.2.0` or newer; see [Install](/install#with-go)                                                                                                 |
 
 ## Connection
 
@@ -23,7 +23,7 @@
 | Problem | Likely cause |
 | ------- | ------------ |
 | `destination bucket not found` | Create the KV bucket on destination first (e.g. Terraform) |
-| Run appears slow on large buckets | Expected — use `--workers 32` (or higher) for copy/verify; dry-run only lists keys |
+| Run appears slow on large buckets | Expected for API copy — use `--workers 32` and `--no-verify`; or use [`backup kv`](/commands/backup/kv) + [`restore kv`](/commands/restore/kv) for bulk stream snapshots |
 | Migratable count ≠ `nats kv ls \| wc -l` | Investigate before migrating — counts should match |
 | Verify reports missing / mismatch | Re-run `natsmith migrate kv --verify-only --failures-file kv-failures.log …` |
 | Verify reports dest-only | Extra keys on destination not present on source |

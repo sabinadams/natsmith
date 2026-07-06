@@ -1,0 +1,26 @@
+---
+asIndexPage: true
+---
+
+# backup
+
+```bash
+natsmith backup <subcommand> [flags]
+```
+
+Create JetStream stream snapshots for fast bulk transfer between clusters.
+
+| Subcommand | Description |
+|------------|-------------|
+| [`kv`](/commands/backup/kv) | Backup KV buckets (`KV_<bucket>` streams) |
+
+Snapshots are written to local disk. Copy them to the destination environment, then use [`restore`](/commands/restore).
+
+See [KV: migrate vs backup/restore](/commands/migrate#kv-migrate-vs-backuprestore) for when to use this instead of [`migrate kv`](/commands/migrate/kv).
+
+```bash
+natsmith backup kv \
+  --context sandbox-legacy \
+  --dir ./backups/sandbox-legacy \
+  --bucket telnyx-phone-validation
+```

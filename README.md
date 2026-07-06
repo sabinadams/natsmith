@@ -52,8 +52,10 @@ See the [docs](https://sabinadams.github.io/natsmith/commands/migrate/) for comm
 
 | Command | Description |
 |---------|-------------|
-| `natsmith migrate kv` | Copy KV buckets and verify |
+| `natsmith migrate kv` | Copy KV buckets and verify (per-key API) |
 | `natsmith migrate objects` | Copy object store buckets |
+| `natsmith backup kv` | Snapshot KV streams to disk (fast bulk) |
+| `natsmith restore kv` | Restore KV streams from snapshots |
 
 See [Commands](https://sabinadams.github.io/natsmith/commands/) for flags and the [migrate overview](https://sabinadams.github.io/natsmith/commands/migrate/) for production workflow.
 

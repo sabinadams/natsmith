@@ -1,0 +1,55 @@
+# backup kv
+
+```bash
+natsmith backup kv [flags]
+```
+
+Backs up KV buckets as JetStream stream snapshots — the same format as `nats stream backup` (`backup.json` + `stream.tar.s2`). Much faster than per-key API copy for large buckets (millions of keys).
+
+## Output layout
+
+```text
+{--dir}/
+  schema/
+    backup.json
+    stream.tar.s2
+  telnyx-phone-validation/
+    backup.json
+    stream.tar.s2
+```
+
+## Flags
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--context` | yes | NATS CLI context (source cluster) |
+| `--dir` | yes | Output directory for snapshots |
+| `--bucket` | — | Comma-separated buckets (default: all) |
+| `--omit` | — | Comma-separated buckets to skip |
+| `--no-progress` | — | Plain log output |
+| `--timeout` | — | Per-request timeout (default `30s`) |
+
+## Examples
+
+### Backup one bucket
+
+```bash
+natsmith backup kv \
+  --context sandbox-legacy \
+  --dir ./backups/sandbox-legacy \
+  --bucket schema
+```
+
+### Backup all KV buckets
+
+```bash
+natsmith backup kv \
+  --context sandbox-legacy \
+  --dir ./backups/sandbox-legacy
+```
+
+## Restore
+
+Copy the backup directory to a machine that can reach the destination cluster, then see [`restore kv`](/commands/restore/kv).
+
+**Requires stream admin permissions** on the source cluster (more than KV read). If backup fails with a permissions error, use [`migrate kv`](/commands/migrate/kv) instead.

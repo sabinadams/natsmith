@@ -1,0 +1,24 @@
+---
+asIndexPage: true
+---
+
+# restore
+
+```bash
+natsmith restore <subcommand> [flags]
+```
+
+Restore JetStream stream snapshots created by [`backup`](/commands/backup) or the NATS CLI.
+
+See [KV: migrate vs backup/restore](/commands/migrate#kv-migrate-vs-backuprestore) for when to use this instead of [`migrate kv`](/commands/migrate/kv).
+
+| Subcommand | Description |
+|------------|-------------|
+| [`kv`](/commands/restore/kv) | Restore KV buckets from stream snapshots |
+
+```bash
+natsmith restore kv \
+  --context sandbox-dedicated \
+  --dir ./backups/sandbox-legacy \
+  --force
+```

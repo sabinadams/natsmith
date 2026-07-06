@@ -8,6 +8,8 @@ Top-level command groups exposed by `natsmith`.
 
 | Group | Usage | Description |
 |-------|-------|-------------|
-| [`migrate`](/commands/migrate) | `natsmith migrate …` | Copy JetStream data between NATS clusters |
+| [`migrate`](/commands/migrate) | `natsmith migrate …` | Copy JetStream data between NATS clusters (per-key API) |
+| [`backup`](/commands/backup) | `natsmith backup …` | Snapshot streams to local files (fast bulk export) |
+| [`restore`](/commands/restore) | `natsmith restore …` | Restore streams from local snapshot files |
 
 Each group page documents shared flags, subcommands, and examples.

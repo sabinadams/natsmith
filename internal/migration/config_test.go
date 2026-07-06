@@ -248,3 +248,68 @@ func TestNewObjectConfig(t *testing.T) {
 		t.Fatalf("unexpected config: %+v", cfg)
 	}
 }
+
+func TestNewEndpointConfigRequiresContext(t *testing.T) {
+	t.Parallel()
+
+	if _, err := NewEndpointConfig(EndpointInput{}); err == nil {
+		t.Fatal("expected error for missing context")
+	}
+}
+
+func TestNewEndpointConfigFromContext(t *testing.T) {
+	dir := t.TempDir()
+	ctxDir := filepath.Join(dir, "nats", "context")
+	if err := os.MkdirAll(ctxDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(ctxDir, "cluster.json"),
+		[]byte(`{"url":"nats://cluster:4222","creds":"cluster.creds"}`),
+		0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfg, err := NewEndpointConfig(EndpointInput{
+		Context:      "cluster",
+		BucketFilter: "a,b",
+		OmitFilter:   "skip",
+		NoProgress:   true,
+		Timeout:      45 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("NewEndpointConfig: %v", err)
+	}
+	if cfg.URL != "nats://cluster:4222" || cfg.Creds != "cluster.creds" {
+		t.Fatalf("resolved context: %+v", cfg)
+	}
+	if cfg.RequestTimeout != 45*time.Second || !cfg.NoProgress {
+		t.Fatalf("flags: %+v", cfg)
+	}
+	if !cfg.ShouldIncludeBucket("a") || !cfg.ShouldIncludeBucket("b") {
+		t.Fatal("expected bucket filter")
+	}
+	if cfg.ShouldIncludeBucket("other") || cfg.ShouldIncludeBucket("skip") {
+		t.Fatal("expected other/skip filtered")
+	}
+}
+
+func TestEndpointShouldIncludeBucket(t *testing.T) {
+	t.Parallel()
+
+	cfg := EndpointConfig{
+		Buckets: map[string]struct{}{"keep": {}},
+		Omit:    map[string]struct{}{"skip": {}},
+	}
+	if !cfg.ShouldIncludeBucket("keep") {
+		t.Fatal("expected keep")
+	}
+	if cfg.ShouldIncludeBucket("skip") {
+		t.Fatal("expected skip omitted")
+	}
+	if cfg.ShouldIncludeBucket("other") {
+		t.Fatal("expected other filtered out")
+	}
+}

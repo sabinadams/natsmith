@@ -7,8 +7,11 @@ import (
 )
 
 func ScanOKRunMessage(bucket string, index, total int, run BucketRunResult) string {
-	return report.BucketInfo(report.KindKV, bucket, index, total,
-		fmt.Sprintf("%d migratable keys", run.Migratable))
+	detail := fmt.Sprintf("%d migratable keys", run.Migratable)
+	if run.GhostSkipped > 0 {
+		detail = fmt.Sprintf("%s (%d ghost skipped)", detail, run.GhostSkipped)
+	}
+	return report.BucketInfo(report.KindKV, bucket, index, total, detail)
 }
 
 func ScanFailMessage(bucket string, index, total int, err error) string {

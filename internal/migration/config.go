@@ -173,3 +173,62 @@ func resolveContext(label, name string) (url, creds string, err error) {
 
 	return ctx.URL, ctx.Creds, nil
 }
+
+// EndpointConfig holds settings for single-cluster stream operations.
+type EndpointConfig struct {
+	URL            string
+	Creds          string
+	Buckets        map[string]struct{}
+	Omit           map[string]struct{}
+	NoProgress     bool
+	RequestTimeout time.Duration
+}
+
+// EndpointInput holds raw flag values for building an EndpointConfig.
+type EndpointInput struct {
+	Context      string
+	BucketFilter string
+	OmitFilter   string
+	NoProgress   bool
+	Timeout      time.Duration
+}
+
+// NewEndpointConfig builds and validates an EndpointConfig from flag values.
+func NewEndpointConfig(in EndpointInput) (EndpointConfig, error) {
+	timeout := in.Timeout
+	if timeout <= 0 {
+		timeout = nats.DefaultRequestTimeout
+	}
+
+	url, creds, err := resolveContext("context", in.Context)
+	if err != nil {
+		return EndpointConfig{}, err
+	}
+
+	cfg := EndpointConfig{
+		URL:            url,
+		Creds:          creds,
+		NoProgress:     in.NoProgress,
+		RequestTimeout: timeout,
+	}
+
+	if in.BucketFilter != "" {
+		cfg.Buckets = ParseBucketNames(in.BucketFilter)
+	}
+	if in.OmitFilter != "" {
+		cfg.Omit = ParseBucketNames(in.OmitFilter)
+	}
+
+	return cfg, nil
+}
+
+func (c *EndpointConfig) ShouldIncludeBucket(name string) bool {
+	if _, excluded := c.Omit[name]; excluded {
+		return false
+	}
+	if len(c.Buckets) == 0 {
+		return true
+	}
+	_, ok := c.Buckets[name]
+	return ok
+}

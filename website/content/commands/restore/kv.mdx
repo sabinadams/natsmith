@@ -1,0 +1,55 @@
+# restore kv
+
+```bash
+natsmith restore kv [flags]
+```
+
+Restores KV buckets from JetStream stream snapshots created by [`backup kv`](/commands/backup/kv) or `nats stream backup`.
+
+## Input layout
+
+`--dir` can be either:
+
+- A **single bucket backup** directory containing `backup.json` and `stream.tar.s2`
+- A **parent directory** with one subdirectory per bucket (as written by `natsmith backup kv`)
+
+## Flags
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--context` | yes | NATS CLI context (destination cluster) |
+| `--dir` | yes | Backup directory (single bucket or parent) |
+| `--bucket` | — | Comma-separated buckets to restore (default: all found) |
+| `--omit` | — | Comma-separated buckets to skip |
+| `--force` | — | Delete existing streams before restore |
+| `--replicas` | — | Override replica count (`0` = use backup config) |
+| `--no-progress` | — | Plain log output |
+| `--timeout` | — | Per-request timeout (default `30s`) |
+
+## Examples
+
+### Restore one bucket
+
+```bash
+natsmith restore kv \
+  --context sandbox-dedicated \
+  --dir ./backups/sandbox-legacy/schema
+```
+
+### Restore all buckets from a backup tree
+
+```bash
+natsmith restore kv \
+  --context sandbox-dedicated \
+  --dir ./backups/sandbox-legacy \
+  --force
+```
+
+Use `--force` when re-running restore on a cluster that already has the stream from a partial attempt.
+
+## Notes
+
+- Restores the **full stream state** from backup (including revision history and tombstones), not just live keys.
+- The destination stream must **not** exist unless `--force` is set.
+- Destination KV buckets do not need to exist beforehand — restore creates the backing stream.
+- Override `--replicas` when restoring to a cluster with a different replica topology (e.g. sandbox → single-replica dev).

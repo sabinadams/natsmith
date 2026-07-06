@@ -14,7 +14,15 @@ Deleted keys are not listed by the KV API and are not migrated.
 
 **Success looks like:** `N/N migratable copied` and `verify: N ok, 0 missing, 0 mismatch, 0 dest-only`.
 
-For a production run, see the [migrate overview](/commands/migrate).
+For a production run, see the [migrate overview](/commands/migrate) — especially [KV: migrate vs backup/restore](/commands/migrate#kv-migrate-vs-backuprestore).
+
+## Migrate vs backup/restore
+
+**Migrate** (`ListKeys` → `Get` → `Put`) is the portable per-key path: direct cluster-to-cluster, KV credentials only, live keys only. Use it for pilots, verification, and buckets up to a few hundred thousand keys.
+
+**Backup + restore** is faster for millions of keys but needs stream admin and local snapshot files. See [`backup kv`](/commands/backup/kv).
+
+Per-key migrate cannot avoid reading each value from source and writing it to dest — there is no shorter API path across two clusters. Stream-scanning the backing stream does not help; it reads far more messages than live keys on legacy buckets.
 
 ## How migration works
 
@@ -40,6 +48,10 @@ Dry-run only lists and counts keys — no reads or writes. **`--workers` applies
 | Very large buckets (> 1M keys) | Inline verify still runs; destination-only extra-key scan is skipped |
 
 Use `--bucket` or `--omit` to scope long runs.
+
+### Ghost keys
+
+On some legacy buckets, `ListKeys` may return keys that `Get` cannot resolve (stale index entries). These **ghost keys are skipped** with a count in the summary — the bucket run continues and real keys are still copied.
 
 ## Flags
 

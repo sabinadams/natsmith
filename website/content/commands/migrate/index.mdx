@@ -50,19 +50,43 @@ Contexts are [NATS CLI contexts](https://docs.nats.io/using-nats/nats-tools/nats
 4. Copy to destination (unless `-dry-run` or `-verify-only`)
 5. Print per-bucket summary and final totals
 
-## Recommended workflow
+Ensure destination buckets exist before step 3. See [`migrate kv`](/commands/migrate/kv) and [`migrate objects`](/commands/migrate/objects) for flags and examples.
 
-Step-by-step order for a production migration:
+## KV: migrate vs backup/restore
+
+For KV buckets you can choose between two approaches:
+
+| | [`migrate kv`](/commands/migrate/kv) | [`backup kv`](/commands/backup/kv) + [`restore kv`](/commands/restore/kv) |
+|---|---|---|
+| **How** | Per-key API copy (`ListKeys` → `Get` → `Put`) | JetStream stream snapshot (`backup.json` + `stream.tar.s2`) |
+| **Speed** | Fine for small/medium buckets; **days** for tens of millions of keys | **Hours** for very large buckets |
+| **Permissions** | KV read (source) + KV write (dest) | **Stream admin** on source and dest |
+| **Transfer** | Direct cluster-to-cluster | Backup to disk → copy files → restore |
+| **Destination** | Buckets must already exist | Creates/replaces backing stream (`--force`) |
+| **What is copied** | Live keys only | Full stream state (history, tombstones) |
+| **Resume** | `--skip-existing` | Re-run restore with `--force` |
+| **Verify** | `--verify-only` without writing | Compare key counts or spot-check with `migrate kv --verify-only` |
+
+**Use migrate kv when:**
+
+- Piloting a bucket or running `--verify-only`
+- Buckets have up to a few hundred thousand keys
+- You only have KV API credentials (no stream backup permission)
+- Destination buckets already exist via Terraform and you want live keys only
+
+**Use backup + restore when:**
+
+- A bucket has **millions of keys** (e.g. phone-validation caches)
+- You have stream admin on both clusters
+- You want the fastest bulk transfer and can stage snapshot files between environments
+
+**Why not stream scan for migrate?** Scanning the `KV_<bucket>` backing stream reads every stream message (including history and tombstones), not just live keys. On legacy buckets that is often **orders of magnitude more data** than `ListKeys` — it does not shorten large migrations and was removed in favor of `ListKeys` for migrate and stream snapshots for bulk transfer.
+
+### Recommended KV workflow (production)
 
 | Step | Command |
 |------|---------|
-| 1 | `natsmith migrate kv --dry-run …` — inspect KV buckets and key counts |
-| 2 | `natsmith migrate objects --dry-run …` — inspect object stores |
-| 3 | `natsmith migrate kv --bucket my-bucket …` — pilot one KV bucket |
-| 4 | `natsmith migrate kv --verify-only --bucket my-bucket …` — confirm that bucket |
-| 5 | `natsmith migrate kv … --failures-file kv-failures.log` — full KV migration |
-| 6 | `natsmith migrate objects … --timeout 5m` — full object migration |
-
-(`…` = `--source-context` and `--dest-context`.)
-
-Ensure destination buckets exist before step 3. See [`migrate kv`](/commands/migrate/kv) and [`migrate objects`](/commands/migrate/objects) for flags and examples.
+| 1 | `natsmith migrate kv --dry-run …` — inspect all bucket key counts |
+| 2 | Large buckets | `natsmith backup kv --context <source> --dir ./backups …` then copy files and `natsmith restore kv --context <dest> --dir ./backups --force` |
+| 3 | Small buckets | `natsmith migrate kv --workers 32 --no-verify …` (then `--verify-only` if needed) |
+| 4 | `natsmith migrate objects …` — object stores (migrate only today) |

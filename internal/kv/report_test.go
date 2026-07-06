@@ -22,6 +22,11 @@ func TestReportMessages(t *testing.T) {
 			want: []string{"KV schema (1/2)", "1458 migratable keys"},
 		},
 		{
+			name: "scan ok run ghost skipped",
+			got:  ScanOKRunMessage("schema", 1, 2, BucketRunResult{Migratable: 1667, GhostSkipped: 3}),
+			want: []string{"1667 migratable keys (3 ghost skipped)"},
+		},
+		{
 			name: "scan fail",
 			got:  ScanFailMessage("schema", 2, 2, testErr),
 			want: []string{"✗ KV schema (2/2)", "failed", "boom"},
