@@ -62,7 +62,7 @@ See [Commands](https://sabinadams.github.io/natsmith/commands/) for flags and [G
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Documentation source lives in [`website/`](website/).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and [releasing](CONTRIBUTING.md#releasing). Documentation source lives in [`website/`](website/).
 
 ## License
 

@@ -90,11 +90,11 @@ internal/nats/, progress/, workpool/   generic libraries
 
 ```
 internal/migration/     config.go, cluster.go, summary.go, buckets.go
-internal/kv/            buckets.go, run_bucket.go, stream.go, verify.go, report.go
-internal/objects/       buckets.go, snapshot.go, filter.go, copy.go, report.go
-internal/report/        shared stderr message formatting
-internal/nats/          conn.go, context.go — connect + NATS CLI context loading
-internal/progress/      stderr progress UI
+internal/kv/            buckets.go, run_bucket.go, stream.go, verify.go
+internal/objects/       buckets.go, snapshot.go, filter.go, copy.go
+internal/report/        shared stderr constants (KindKV, KindObjectStore)
+internal/nats/          conn.go, context.go, runctx.go — connect + NATS CLI contexts
+internal/progress/      stderr progress UI (session, bars, plan, output modes)
 internal/workpool/      parallel worker pool
 internal/testutil/      unit test helpers
 internal/integration/   cross-cluster integration test helpers
@@ -104,10 +104,10 @@ internal/integration/   cross-cluster integration test helpers
 |------|----------------|
 | `buckets.go` | List/filter buckets for migration |
 | `run_bucket.go` | ListKeys → Get → Put migration pipeline |
-| `verify.go` | Verify results, reports, and dest-only checks |
-| `report.go` | Formatted status lines consumed by `cmd/` (not business logic) |
+| `stream.go` | JetStream snapshot backup/restore |
+| `verify.go` | Verify results and failure file output |
 
-`report.go` holds user-visible message strings so orchestration files stay focused on control flow. Shared formatting lives in `internal/report/`; domain-specific wrappers stay in each package. Neither performs JetStream I/O.
+Per-bucket stderr output goes through [`internal/progress`](internal/progress/) (`Session`, progress bars). `internal/report/` holds shared kind labels only.
 
 ## Project layout
 
@@ -125,14 +125,14 @@ cmd/restore/                  ← "natsmith restore …"
   restore.go, restore_test.go
   kv.go, kv_test.go
 
-internal/nats/                ← connect + NATS CLI context loading (conn.go, context.go)
+internal/nats/                ← connect + NATS CLI context loading (conn.go, context.go, runctx.go)
 internal/workpool/            ← parallel worker pool (reusable)
 internal/progress/            ← stderr progress UI (reusable)
 internal/migration/           ← shared config, cluster connect, summary, exit codes, bucket filtering
   config.go, cluster.go, summary.go, buckets.go
-internal/report/              ← shared stderr message formatting
-internal/kv/                  ← KV buckets.go, run_bucket.go, stream.go, verify.go, report.go
-internal/objects/             ← objects buckets.go, snapshot.go, filter.go, copy.go, report.go
+internal/report/              ← shared stderr kind labels (KV, object store)
+internal/kv/                  ← buckets.go, run_bucket.go, stream.go, verify.go
+internal/objects/             ← buckets.go, snapshot.go, filter.go, copy.go
 
 internal/testutil/            ← unit test helpers
 internal/integration/         ← integration test cluster helpers
@@ -243,61 +243,71 @@ CI runs three jobs on every push and pull request to `main`:
 | **Lint** | `gofmt`, staticcheck |
 | **Modules** | `go mod verify`, tidy check |
 
-## Publishing releases
+## Releasing
 
-Releases are created through the **GitHub UI**, not by pushing tags from a local machine.
+Publishing a semver tag triggers the [Release workflow](.github/workflows/release.yml). GoReleaser builds binaries, attaches them to the GitHub release, and updates the [Homebrew formula](https://github.com/sabinadams/homebrew-natsmith). **No doc version bumps are required** — user-facing install docs use `@latest` or resolve the latest tag from GitHub.
 
-### Steps
+### Checklist
 
-1. Merge changes to `main` and confirm CI is green.
-2. Open the repo on GitHub → **Releases** → **Draft a new release**.
-3. Click **Choose a tag** → type a new semver tag (e.g. `v0.1.1`). Tags must start with `v` to match the release workflow.
-4. Set the release title (often the same as the tag) and write release notes.
-5. Click **Publish release**.
+1. Merge changes to `main` and confirm [CI](.github/workflows/ci.yml) is green.
+2. Choose the next [semver](https://semver.org/) tag (`vMAJOR.MINOR.PATCH`). Tags must start with `v`.
+3. Publish the release (preferred: **GitHub UI** — steps below).
+4. Watch the **Release** workflow on the [Actions](https://github.com/sabinadams/natsmith/actions) tab (~3 minutes).
+5. Verify the [GitHub release](https://github.com/sabinadams/natsmith/releases) has archives + `checksums.txt`, and the Homebrew tap shows the new version.
+6. Upgrade locally: `brew update && brew upgrade natsmith`.
 
-### What happens next
+### GitHub UI (preferred)
 
-Publishing creates the tag on GitHub. That triggers the [Release workflow](.github/workflows/release.yml), which runs [GoReleaser](https://goreleaser.com/) to:
+1. Open **Releases** → **Draft a new release**.
+2. **Choose a tag** → type a new tag (e.g. `v1.2.3`) targeting `main`.
+3. Set the title (usually the tag) and write release notes.
+4. Click **Publish release**.
 
-1. Run `go mod tidy` and `go test ./...`
-2. Cross-compile the `natsmith` binary for linux, darwin, and windows (amd64 and arm64)
-3. Attach platform archives and `checksums.txt` to the GitHub release you just created
-4. Update the Homebrew formula in [`homebrew-natsmith`](https://github.com/sabinadams/homebrew-natsmith) (install via `brew install sabinadams/natsmith/natsmith`)
+Publishing creates the tag and triggers GoReleaser. Write release notes in the UI — the workflow adds binaries afterward.
 
-Write release notes in the UI before publishing. The workflow adds binaries afterward — it does not replace your notes.
+### Alternative: push a tag locally
+
+Equivalent to the UI flow; useful if you prefer the terminal:
+
+```bash
+git tag -a v1.2.3 -m "v1.2.3"
+git push origin v1.2.3
+```
+
+GoReleaser creates the GitHub release when the tag lands.
+
+### What GoReleaser does
+
+On tag push (`v*`):
+
+1. Runs `go mod tidy` and `go test ./...`
+2. Cross-compiles for linux, darwin, and windows (amd64 and arm64)
+3. Uploads platform archives and `checksums.txt` to the GitHub release
+4. Updates `homebrew-natsmith/Formula/natsmith.rb`
+
+Config: [`.goreleaser.yaml`](.goreleaser.yaml).
 
 ### Release artifacts
 
-Each platform archive contains the `natsmith` binary.
+| Platform | Format | Example |
+|----------|--------|---------|
+| macOS / Linux | `.tar.gz` | `natsmith_1.2.3_darwin_arm64.tar.gz` |
+| Windows | `.zip` | `natsmith_1.2.3_windows_amd64.zip` |
 
-| Platform | Archive format | Example filename |
-|----------|----------------|------------------|
-| macOS / Linux | `.tar.gz` | `natsmith_0.2.0_darwin_arm64.tar.gz` |
-| Windows | `.zip` | `natsmith_0.2.0_windows_amd64.zip` |
+### Validate locally (optional)
+
+```bash
+go run github.com/goreleaser/goreleaser/v2@v2.8.1 check
+go run github.com/goreleaser/goreleaser/v2@v2.8.1 build --snapshot --clean   # outputs to ./dist
+```
 
 ### How users install
+
+Documented on the [Install](https://sabinadams.github.io/natsmith/install/) page. The [install script](website/public/install.sh) (also in `scripts/install.sh`) resolves the latest GitHub release automatically.
 
 | Method | Command |
 |--------|---------|
 | Install script | `curl -fsSL https://sabinadams.github.io/natsmith/install.sh \| sh` |
 | Homebrew | `brew install sabinadams/natsmith/natsmith` |
-| GitHub Releases | Download from [Releases](https://github.com/sabinadams/natsmith/releases) |
+| GitHub Releases | [github.com/sabinadams/natsmith/releases](https://github.com/sabinadams/natsmith/releases) |
 | Go | `go install github.com/sabinadams/natsmith/cmd/natsmith@latest` |
-
-The install script lives in [`scripts/install.sh`](scripts/install.sh) and is published at `https://sabinadams.github.io/natsmith/install.sh`.
-
-### Validate GoReleaser config locally (optional)
-
-```bash
-go run github.com/goreleaser/goreleaser/v2@v2.8.1 check
-```
-
-Build a local snapshot (outputs to `./dist`, gitignored):
-
-```bash
-go run github.com/goreleaser/goreleaser/v2@v2.8.1 build --snapshot --clean
-```
-
-## How users install and update
-
-End-user install paths are documented on the [Install](https://sabinadams.github.io/natsmith/install/) page (`curl` install script, Homebrew, GitHub Releases, and `go install`). Contributors publish a semver tag — GoReleaser attaches binaries and updates the Homebrew formula automatically.
