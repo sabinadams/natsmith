@@ -1,6 +1,7 @@
 package progress
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -114,4 +115,25 @@ func TestTransferTrackerUpgradesBar(t *testing.T) {
 		tracker.Report(1000, 2000)
 		tracker.Finish()
 	})
+}
+
+func TestSessionOutput(t *testing.T) {
+	out := testutil.CaptureStderr(t, func() {
+		s := NewSession(false, "KV restore")
+		s.Status("Connecting...")
+		s.BucketSuccess("KV", "schema", 1, 2, "done")
+		s.BucketFail("KV", "bad", 2, 2, "restore failed", fmt.Errorf("boom"))
+		s.Completef("KV restore complete: %d/%d buckets", 1, 2)
+	})
+	for _, want := range []string{
+		"KV restore",
+		"Connecting...",
+		"✓ KV schema (1/2)",
+		"✗ KV bad (2/2)",
+		"KV restore complete: 1/2 buckets",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output missing %q: %s", want, out)
+		}
+	}
 }

@@ -2,13 +2,13 @@ package backup
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/sabinadams/natsmith/internal/kv"
 	"github.com/sabinadams/natsmith/internal/migration"
 	"github.com/sabinadams/natsmith/internal/nats"
 	"github.com/sabinadams/natsmith/internal/progress"
+	"github.com/sabinadams/natsmith/internal/report"
 	"github.com/spf13/cobra"
 )
 
@@ -29,9 +29,8 @@ func init() {
 }
 
 func runKVBackup(cfg migration.EndpointConfig) error {
-	ui := progress.NewProgress(!cfg.NoProgress)
-	progress.PrintHeader("KV backup")
-	fmt.Fprintln(os.Stderr, "Connecting...")
+	session := progress.NewSession(!cfg.NoProgress, "KV backup")
+	session.Status("Connecting...")
 
 	nc, mgr, err := nats.ConnectJSM(cfg.URL, cfg.Creds, cfg.RequestTimeout)
 	if err != nil {
@@ -61,30 +60,29 @@ func runKVBackup(cfg migration.EndpointConfig) error {
 		index, total := i+1, len(buckets)
 		outDir := kv.BackupDirForBucket(shared.dir, bucket)
 
-		transfer := ui.StartTransferTracked("KV", bucket, index, total, "backing up", 0)
-		var report kv.TransferReporter
+		transfer := session.UI.StartTransferTracked(report.KindKV, bucket, index, total, "backing up", 0)
+		var reportFn kv.TransferReporter
 		if !cfg.NoProgress {
-			report = func(p kv.TransferProgress) {
+			reportFn = func(p kv.TransferProgress) {
 				transfer.Report(p.Sent, p.Total)
 			}
 		}
 
-		result, err := kv.BackupBucket(ctx, mgr, bucket, outDir, !cfg.NoProgress, report)
+		result, err := kv.BackupBucket(ctx, mgr, bucket, outDir, !cfg.NoProgress, reportFn)
 		transfer.Finish()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "  ✗ KV %s (%d/%d) — failed: %v\n", bucket, index, total, err)
+			session.BucketFail(report.KindKV, bucket, index, total, "backup failed", err)
 			exitCode = 1
 			continue
 		}
 
-		fmt.Fprintf(os.Stderr,
-			"  ✓ KV %s (%d/%d) — %d messages, %d bytes → %s\n",
-			bucket, index, total, result.Messages, result.Bytes, result.Dir,
+		session.BucketSuccess(report.KindKV, bucket, index, total,
+			fmt.Sprintf("%d messages, %d bytes → %s", result.Messages, result.Bytes, result.Dir),
 		)
 		completed++
 	}
 
-	fmt.Fprintf(os.Stderr, "\nKV backup complete: %d/%d buckets under %s\n", completed, len(buckets), shared.dir)
+	session.Completef("KV backup complete: %d/%d buckets under %s", completed, len(buckets), shared.dir)
 	if exitCode != 0 {
 		return &migration.ExitError{Code: exitCode}
 	}

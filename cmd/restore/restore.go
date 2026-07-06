@@ -1,8 +1,6 @@
 package restore
 
 import (
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/sabinadams/natsmith/internal/migration"
@@ -56,8 +54,4 @@ func endpointConfig() (migration.EndpointConfig, error) {
 		NoProgress:   shared.noProgress,
 		Timeout:      shared.timeout,
 	})
-}
-
-func logStatus(msg string) {
-	fmt.Fprintln(os.Stderr, msg)
 }

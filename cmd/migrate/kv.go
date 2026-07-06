@@ -43,13 +43,12 @@ func init() {
 }
 
 func runKV(cfg migration.KVConfig) error {
-	ui := progress.NewProgress(!cfg.NoProgress)
-
 	title := "KV migration"
 	if cfg.VerifyOnly {
 		title = "KV verification"
 	}
-	progress.PrintHeader(title)
+	session := progress.NewSession(!cfg.NoProgress, title)
+	session.Status("Connecting...")
 
 	clusters, err := connectClusters(cfg.BaseConfig)
 	if err != nil {
@@ -72,7 +71,7 @@ func runKV(cfg migration.KVConfig) error {
 		bucket := status.Bucket()
 		index, total := i+1, len(buckets)
 
-		scanBar := ui.StartIndeterminate("KV", bucket, index, total, "listing keys")
+		scanBar := session.UI.StartIndeterminate("KV", bucket, index, total, "listing keys")
 
 		var destKV jetstream.KeyValue
 		if !cfg.DryRun {
@@ -91,7 +90,7 @@ func runKV(cfg migration.KVConfig) error {
 			if cfg.VerifyOnly {
 				action = "verifying"
 			}
-			actionBar = ui.StartIndeterminate("KV", bucket, index, total, action)
+			actionBar = session.UI.StartIndeterminate("KV", bucket, index, total, action)
 		}
 
 		run, err := kv.RunBucket(

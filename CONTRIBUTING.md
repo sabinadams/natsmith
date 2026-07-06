@@ -207,6 +207,21 @@ No edits to `cmd/root.go` are needed for migrate subcommands.
 
 Do not add an `internal/cli/` layer. Cobra wiring and command orchestration belong in `cmd/`; reusable JetStream logic belongs in `internal/<feature>/`; cross-command helpers belong in `internal/migration/`, `internal/nats/`, `internal/progress/`, etc.
 
+### Progress UI (all commands)
+
+Use [`internal/progress`](internal/progress/) for stderr output:
+
+1. `session := progress.NewSession(!cfg.NoProgress, "Title")`
+2. `session.Status("Connecting...")`
+3. Per bucket — **one bar at a time**:
+   - `StartIndeterminate` — scan/list phases (migrate)
+   - `StartBucket` — counted item copy (objects)
+   - `StartTransferTracked` — byte transfer (backup/restore)
+4. `session.BucketSuccess` / `session.BucketFail` for per-bucket results
+5. `session.Completef` or `migration.CompleteRun` for the footer
+
+Respect `--no-progress`: bars are disabled; throttled plain lines are used when stderr is not a TTY.
+
 ## Pull requests
 
 1. Branch from `main`.

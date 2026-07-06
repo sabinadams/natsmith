@@ -27,9 +27,9 @@ func init() {
 }
 
 func runObjects(cfg migration.ObjectConfig) error {
-	ui := progress.NewProgress(!cfg.NoProgress)
+	session := progress.NewSession(!cfg.NoProgress, "Object store migration")
+	session.Status("Connecting...")
 	copyTimeout := objects.CopyTimeout(cfg.RequestTimeout)
-	progress.PrintHeader("Object store migration")
 
 	clusters, err := connectClusters(cfg.BaseConfig)
 	if err != nil {
@@ -49,7 +49,7 @@ func runObjects(cfg migration.ObjectConfig) error {
 		bucket := status.Bucket()
 		index, total := i+1, len(buckets)
 
-		scan := ui.StartIndeterminate("Object store", bucket, index, total, "scanning meta stream")
+		scan := session.UI.StartIndeterminate("Object store", bucket, index, total, "scanning meta stream")
 		snap, err := objects.SnapshotFromStream(clusters.Ctx, clusters.SourceJS, bucket, scan.ReportScan)
 		if err != nil {
 			scan.FinishMessage(objects.ScanFailMessage(bucket, index, total, err))
@@ -91,7 +91,7 @@ func runObjects(cfg migration.ObjectConfig) error {
 
 		summary.Migratable += len(migratable)
 
-		bar := ui.StartBucket("Object store", bucket, index, total, len(migratable), cfg.Workers)
+		bar := session.UI.StartBucket("Object store", bucket, index, total, len(migratable), cfg.Workers)
 		stats, err := objects.CopyBucket(clusters.Ctx, copyTimeout, clusters.DestJS, sourceOS, destOS, migratable, cfg.SkipExisting, cfg.Workers, bar)
 		if err != nil {
 			bar.FinishMessage(objects.CopyFailMessage(bucket, index, total, err))
