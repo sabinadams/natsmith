@@ -9,12 +9,6 @@ import (
 func TestReportMessages(t *testing.T) {
 	t.Parallel()
 
-	snap := BucketSnapshot{
-		Listed:       []string{"a", "b"},
-		Migratable:   []string{"a"},
-		Omitted:      []string{"b"},
-		MessageCount: 5,
-	}
 	testErr := errors.New("boom")
 
 	tests := []struct {
@@ -23,14 +17,14 @@ func TestReportMessages(t *testing.T) {
 		want []string
 	}{
 		{
-			name: "scan ok",
-			got:  ScanOKMessage("schema", 1, 2, snap),
-			want: []string{"KV schema (1/2)", "2 listed", "1 migratable", "1 omitted", "5 stream messages"},
+			name: "scan ok run",
+			got:  ScanOKRunMessage("schema", 1, 2, BucketRunResult{Migratable: 1458}),
+			want: []string{"KV schema (1/2)", "1458 migratable keys"},
 		},
 		{
 			name: "scan fail",
 			got:  ScanFailMessage("schema", 2, 2, testErr),
-			want: []string{"✗ KV schema (2/2)", "failed to scan bucket", "boom"},
+			want: []string{"✗ KV schema (2/2)", "failed", "boom"},
 		},
 		{
 			name: "dest missing",
@@ -38,19 +32,9 @@ func TestReportMessages(t *testing.T) {
 			want: []string{"destination bucket not found", "boom"},
 		},
 		{
-			name: "copy fail",
-			got:  CopyFailMessage("schema", 1, 3, testErr),
-			want: []string{"migration failed", "boom"},
-		},
-		{
 			name: "copy count mismatch",
 			got:  CopyCountMismatchMessage("schema", 10, 8, 2),
 			want: []string{"expected 10 migrated", "got 8", "skipped=2"},
-		},
-		{
-			name: "verify fail",
-			got:  VerifyFailMessage("schema", 1, 1, testErr),
-			want: []string{"verify failed", "boom"},
 		},
 		{
 			name: "failures file",

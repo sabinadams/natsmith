@@ -31,7 +31,7 @@ func runObjects(cfg migration.ObjectConfig) error {
 	copyTimeout := objects.CopyTimeout(cfg.RequestTimeout)
 	progress.PrintHeader("Object store migration")
 
-	clusters, err := migration.ConnectClusters(cfg.BaseConfig, nil)
+	clusters, err := connectClusters(cfg.BaseConfig)
 	if err != nil {
 		return err
 	}

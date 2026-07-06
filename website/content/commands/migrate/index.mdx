@@ -29,7 +29,7 @@ Contexts are [NATS CLI contexts](https://docs.nats.io/using-nats/nats-tools/nats
 
 | | |
 |---|---|
-| **Source** | Read-only — scans streams, never deletes source data |
+| **Source** | Read-only — never deletes source data (KV: `ListKeys`; objects: meta stream scan) |
 | **Destination** | Copies matching records; does **not** remove extra keys or objects on dest |
 | **Buckets** | Must already exist on destination (e.g. Terraform) |
 | **Credentials** | From each NATS CLI context (source: read · destination: write) |
@@ -46,7 +46,7 @@ Contexts are [NATS CLI contexts](https://docs.nats.io/using-nats/nats-tools/nats
 
 1. Connect to source and destination
 2. List buckets (optionally filter with `-bucket` / `-omit`)
-3. Scan each bucket's JetStream stream
+3. List live keys (KV) or scan meta stream (objects), then copy in parallel (see [`migrate kv`](/commands/migrate/kv#how-migration-works))
 4. Copy to destination (unless `-dry-run` or `-verify-only`)
 5. Print per-bucket summary and final totals
 

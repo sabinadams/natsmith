@@ -134,10 +134,13 @@ type ScanProgress struct {
 // ReportScan updates progress while scanning a KV or object store backing stream.
 func (b *BucketBar) ReportScan(p ScanProgress) {
 	var desc string
-	if p.StreamMessages > 0 {
+	switch {
+	case p.StreamMessages > 0:
 		desc = fmt.Sprintf("%s — %d/%d stream messages (%d %s)", b.baseDesc, p.Scanned, p.StreamMessages, p.Unique, p.UniqueLabel)
-	} else {
-		desc = fmt.Sprintf("%s — starting stream scan", b.baseDesc)
+	case p.Scanned > 0:
+		desc = fmt.Sprintf("%s — %d %s", b.baseDesc, p.Scanned, p.UniqueLabel)
+	default:
+		desc = b.baseDesc
 	}
 
 	if b.enabled && b.bar != nil {

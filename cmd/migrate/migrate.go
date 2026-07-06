@@ -1,6 +1,8 @@
 package migrate
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/sabinadams/natsmith/internal/migration"
@@ -59,5 +61,11 @@ func sharedBaseConfig() (migration.BaseConfig, error) {
 		NoProgress:    shared.noProgress,
 		Workers:       shared.workers,
 		Timeout:       shared.timeout,
+	})
+}
+
+func connectClusters(cfg migration.BaseConfig) (*migration.Clusters, error) {
+	return migration.ConnectClusters(cfg, func(msg string) {
+		fmt.Fprintln(os.Stderr, msg)
 	})
 }

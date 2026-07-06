@@ -4,18 +4,42 @@
 natsmith migrate kv [flags]
 ```
 
-Scans each source KV bucket via its backing JetStream stream (`KV_<bucket>`) and classifies keys:
+Lists live keys from each source KV bucket, then copies or verifies them in parallel using `--workers`.
 
 | Classification | Meaning |
 |----------------|---------|
-| **migratable** | Latest op is Put — copied to destination |
-| **omitted** | Tombstone / purge / delete — not copied |
+| **migratable** | Live key on source — copied to destination |
 
-Post-migration verification (on by default) compares migratable keys byte-for-byte. Exit code is non-zero when keys are missing, values mismatch, or destination has extra keys.
+Deleted keys are not listed by the KV API and are not migrated.
 
 **Success looks like:** `N/N migratable copied` and `verify: N ok, 0 missing, 0 mismatch, 0 dest-only`.
 
 For a production run, see the [migrate overview](/commands/migrate).
+
+## How migration works
+
+```text
+ListKeys (source)  →  parallel Get (source)  →  parallel Put (dest)
+                              ↓
+                     inline verify (optional)
+```
+
+1. **List** — enumerate live keys via the KV API (`ListKeys`)
+2. **Read + copy** — workers fetch each key from source and write to destination in parallel
+3. **Verify** — when enabled (default), each key is checked byte-for-byte on the destination
+
+Dry-run only lists and counts keys — no reads or writes. **`--workers` applies to copy, verify, and verify-only runs.**
+
+### Scale
+
+| Concern | Behavior |
+|---------|----------|
+| Large buckets (millions of keys) | Keys are processed in batches; key names are not all held in memory |
+| Memory | Bounded per batch — suitable for tens of millions of keys |
+| Resume | Use `--skip-existing` to continue an interrupted run |
+| Very large buckets (> 1M keys) | Inline verify still runs; destination-only extra-key scan is skipped |
+
+Use `--bucket` or `--omit` to scope long runs.
 
 ## Flags
 
@@ -36,9 +60,9 @@ Contexts live in `~/.config/nats/context/` (same as `nats context`). Each file s
 |------|---------|-------------|
 | `--bucket` | all | Comma-separated buckets to migrate |
 | `--omit` | — | Comma-separated buckets to skip |
-| `--dry-run` | `false` | List buckets and records without writing |
+| `--dry-run` | `false` | List and count keys without reading values or writing |
 | `--skip-existing` | `false` | Skip records that already exist on destination |
-| `--workers` | `1` | Concurrent workers (1–64) |
+| `--workers` | `1` | Concurrent workers for copy/verify (1–64) |
 | `--timeout` | `30s` | Per-request NATS timeout |
 | `--no-progress` | `false` | Plain log output (useful in CI) |
 
@@ -59,8 +83,7 @@ Use `--bucket` to select buckets, `--omit` to exclude them, or both (`--bucket` 
 ```bash
 natsmith migrate kv --dry-run \
   --source-context sandbox-legacy \
-  --dest-context sandbox \
-  --workers 16
+  --dest-context sandbox
 ```
 
 ### Migrate all buckets
@@ -69,7 +92,7 @@ natsmith migrate kv --dry-run \
 natsmith migrate kv \
   --source-context sandbox-legacy \
   --dest-context sandbox \
-  --workers 16 \
+  --workers 32 \
   --failures-file kv-failures.log
 ```
 
@@ -80,7 +103,7 @@ natsmith migrate kv \
   --source-context sandbox-legacy \
   --dest-context sandbox \
   --bucket my-bucket \
-  --workers 16 \
+  --workers 32 \
   --failures-file kv-failures.log
 ```
 
@@ -101,5 +124,5 @@ natsmith migrate kv \
   --source-context sandbox-legacy \
   --dest-context sandbox \
   --skip-existing \
-  --workers 16
+  --workers 32
 ```

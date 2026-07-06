@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/sabinadams/natsmith/internal/kv"
 	"github.com/sabinadams/natsmith/internal/migration"
 	"github.com/sabinadams/natsmith/internal/progress"
@@ -50,9 +51,7 @@ func runKV(cfg migration.KVConfig) error {
 	}
 	progress.PrintHeader(title)
 
-	clusters, err := migration.ConnectClusters(cfg.BaseConfig, func(msg string) {
-		fmt.Fprintln(os.Stderr, msg)
-	})
+	clusters, err := connectClusters(cfg.BaseConfig)
 	if err != nil {
 		return err
 	}
@@ -73,73 +72,97 @@ func runKV(cfg migration.KVConfig) error {
 		bucket := status.Bucket()
 		index, total := i+1, len(buckets)
 
-		listScan := ui.StartIndeterminate("KV", bucket, index, total, "scanning stream")
-		snap, err := kv.SnapshotFromStream(clusters.Ctx, clusters.SourceJS, bucket, listScan.ReportScan)
+		scanBar := ui.StartIndeterminate("KV", bucket, index, total, "listing keys")
+
+		var destKV jetstream.KeyValue
+		if !cfg.DryRun {
+			var err error
+			destKV, err = clusters.DestJS.KeyValue(clusters.Ctx, bucket)
+			if err != nil {
+				scanBar.FinishMessage(kv.DestBucketMissingMessage(bucket, index, total, err))
+				exitCode = 1
+				continue
+			}
+		}
+
+		var actionBar *progress.BucketBar
+		if !cfg.DryRun {
+			action := "migrating"
+			if cfg.VerifyOnly {
+				action = "verifying"
+			}
+			actionBar = ui.StartIndeterminate("KV", bucket, index, total, action)
+		}
+
+		run, err := kv.RunBucket(
+			clusters.Ctx,
+			clusters.SourceJS,
+			bucket,
+			kv.BucketRunParams{
+				DryRun:       cfg.DryRun,
+				VerifyOnly:   cfg.VerifyOnly,
+				SkipExisting: cfg.SkipExisting,
+				Verify:       cfg.Verify,
+				Workers:      cfg.Workers,
+				Dest:         destKV,
+			},
+			scanBar.ReportScan,
+			actionBar,
+		)
 		if err != nil {
-			listScan.FinishMessage(kv.ScanFailMessage(bucket, index, total, err))
+			scanBar.FinishMessage(kv.ScanFailMessage(bucket, index, total, err))
+			if actionBar != nil {
+				actionBar.FinishMessage("")
+			}
 			exitCode = 1
 			continue
 		}
-		listScan.FinishMessage(kv.ScanOKMessage(bucket, index, total, snap))
+		scanBar.FinishMessage(kv.ScanOKRunMessage(bucket, index, total, run))
 
-		summary.Migratable += len(snap.Migratable)
-		summary.Omitted += len(snap.Omitted)
+		summary.Migratable += run.Migratable
 
 		if cfg.DryRun {
 			summary.Buckets++
 			continue
 		}
 
-		destKV, err := clusters.DestJS.KeyValue(clusters.Ctx, bucket)
-		if err != nil {
-			fmt.Fprintln(log.Writer(), kv.DestBucketMissingMessage(bucket, index, total, err))
-			exitCode = 1
-			continue
+		if actionBar != nil {
+			if cfg.VerifyOnly {
+				actionBar.FinishMessage("")
+			} else {
+				actionBar.Finish(run.Copy)
+			}
 		}
 
 		if !cfg.VerifyOnly {
-			bar := ui.StartBucket("KV", bucket, index, total, len(snap.Migratable), cfg.Workers)
-			stats, err := kv.CopyBucket(clusters.Ctx, destKV, snap.Migratable, snap.Values, cfg.SkipExisting, cfg.Workers, bar)
-			if err != nil {
-				bar.FinishMessage(kv.CopyFailMessage(bucket, index, total, err))
-				exitCode = 1
-				continue
-			}
-			bar.Finish(stats)
+			summary.Migrated += run.Copy.Migrated
+			summary.Skipped += run.Copy.Skipped
 
-			summary.Migrated += stats.Migrated
-			summary.Skipped += stats.Skipped
-
-			if !cfg.SkipExisting && stats.Migrated != len(snap.Migratable) {
-				fmt.Fprintln(log.Writer(), kv.CopyCountMismatchMessage(bucket, len(snap.Migratable), stats.Migrated, stats.Skipped))
+			if !cfg.SkipExisting && run.Copy.Migrated != run.Migratable {
+				fmt.Fprintln(log.Writer(), kv.CopyCountMismatchMessage(bucket, run.Migratable, run.Copy.Migrated, run.Copy.Skipped))
 				exitCode = 1
 			}
 		}
 
 		if cfg.Verify {
-			verifyScan := ui.StartIndeterminate("KV", bucket, index, total, fmt.Sprintf("verifying %d keys", len(snap.Migratable)))
-			verify, err := kv.VerifyMigratable(clusters.Ctx, clusters.DestJS, bucket, destKV, snap.Migratable, snap.Values, cfg.Workers, verifyScan.ReportVerify)
-			if err != nil {
-				verifyScan.FinishMessage(kv.VerifyFailMessage(bucket, index, total, err))
-				exitCode = 1
-				continue
+			kv.PrintVerifyReport(bucket, run.Verify)
+			if run.DestOnlySkipped {
+				fmt.Fprintf(os.Stderr, "  ! verify %s: skipped dest-only scan (%d migratable keys exceeds limit)\n", bucket, run.Migratable)
 			}
-			verifyScan.FinishMessage("")
-			kv.PrintVerifyReport(bucket, verify)
 
 			summary.VerifyRan = true
-			summary.VerifyOK += verify.OK
-			summary.VerifyFailed += verify.Issues()
-			summary.DestOnly += verify.DestOnly
+			summary.VerifyOK += run.Verify.OK
+			summary.VerifyFailed += run.Verify.Issues()
+			summary.DestOnly += run.Verify.DestOnly
 
-			if cfg.FailuresFile != "" && (verify.Issues() > 0 || verify.DestOnly > 0) {
-				if err := kv.WriteFailuresFile(cfg.FailuresFile, bucket, verify); err != nil {
+			if cfg.FailuresFile != "" && (run.Verify.Issues() > 0 || run.Verify.DestOnly > 0) {
+				if err := kv.WriteFailuresFile(cfg.FailuresFile, bucket, run.Verify); err != nil {
 					fmt.Fprintln(log.Writer(), kv.FailuresFileErrorMessage(bucket, err))
 					exitCode = 1
 				}
 			}
 
-			if !verify.Passed() {
+			if !run.Verify.Passed() {
 				exitCode = 1
 			}
 		}

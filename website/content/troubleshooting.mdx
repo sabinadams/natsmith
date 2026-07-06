@@ -8,7 +8,7 @@
 | `command not found` after `go install`                             | Add `$(go env GOPATH)/bin` to your `PATH`                                                                                                               |
 | Install script fails to download                                   | No release for your OS/arch, or GitHub API rate limit — try [Homebrew](/install#homebrew-macos--linux) or a [manual download](/install#github-releases) |
 | `brew install sabinadams/natsmith/natsmith` — repository not found | The tap repo was missing; it lives at [homebrew-natsmith](https://github.com/sabinadams/homebrew-natsmith). Re-run the install command                  |
-| `go install …@latest` fails on old tag                             | Use `@v1.0.1` or newer; see [Install](/install#with-go)                                                                                                 |
+| `go install …@latest` fails on old tag                             | Use `@v1.1.0` or newer; see [Install](/install#with-go)                                                                                                 |
 
 ## Connection
 
@@ -20,12 +20,14 @@
 
 ## migrate kv
 
-| Problem                           | Likely cause                                                                      |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| `destination bucket not found`    | Create the KV bucket on destination first (e.g. Terraform)                        |
-| Scan appears stuck                | Large stream — progress updates every 250 messages; wait or filter with `-bucket` |
-| Verify reports missing / mismatch | Re-run `natsmith migrate kv -verify-only -failures-file kv-failures.log …`        |
-| Verify reports dest-only          | Extra keys on destination not in source migratable set                            |
+| Problem | Likely cause |
+| ------- | ------------ |
+| `destination bucket not found` | Create the KV bucket on destination first (e.g. Terraform) |
+| Run appears slow on large buckets | Expected — use `--workers 32` (or higher) for copy/verify; dry-run only lists keys |
+| Migratable count ≠ `nats kv ls \| wc -l` | Investigate before migrating — counts should match |
+| Verify reports missing / mismatch | Re-run `natsmith migrate kv --verify-only --failures-file kv-failures.log …` |
+| Verify reports dest-only | Extra keys on destination not present on source |
+| `skipped dest-only scan` | Bucket has &gt; 1M keys — inline verify still ran; full dest-only scan was skipped |
 
 See [`migrate kv`](/commands/migrate/kv) for flags and examples.
 

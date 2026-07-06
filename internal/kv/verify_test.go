@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/sabinadams/natsmith/internal/testutil"
 )
 
@@ -111,80 +110,5 @@ func TestPrintKeySampleTruncation(t *testing.T) {
 	})
 	if !strings.Contains(out, "... and 3 more") {
 		t.Fatalf("output: %s", out)
-	}
-}
-
-func TestVerifyMigratable(t *testing.T) {
-	srv := testutil.StartServer(t)
-	nc := testutil.Connect(t, srv.ClientURL())
-	js := testutil.JetStream(t, nc)
-	ctx := testutil.Context(t)
-
-	destKV, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "VERIFY"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := destKV.Put(ctx, "ok", []byte("v1")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := destKV.Put(ctx, "bad", []byte("dest")); err != nil {
-		t.Fatal(err)
-	}
-
-	result, err := VerifyMigratable(
-		ctx,
-		js,
-		"VERIFY",
-		destKV,
-		[]string{"ok", "bad", "missing"},
-		map[string][]byte{
-			"ok":      []byte("v1"),
-			"bad":     []byte("source"),
-			"missing": []byte("x"),
-		},
-		2,
-		nil,
-	)
-	if err != nil {
-		t.Fatalf("verify: %v", err)
-	}
-	if result.OK != 1 || result.Mismatch != 1 || result.Missing != 1 {
-		t.Fatalf("unexpected result: %+v", result)
-	}
-	if result.Passed() {
-		t.Fatal("expected failure due to missing/mismatch")
-	}
-}
-
-func TestVerifyMigratableDestOnly(t *testing.T) {
-	srv := testutil.StartServer(t)
-	nc := testutil.Connect(t, srv.ClientURL())
-	js := testutil.JetStream(t, nc)
-	ctx := testutil.Context(t)
-
-	src, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "SRC"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	dest, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "DEST"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := src.Put(ctx, "shared", []byte("v")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := dest.Put(ctx, "shared", []byte("v")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := dest.Put(ctx, "extra", []byte("x")); err != nil {
-		t.Fatal(err)
-	}
-
-	result, err := VerifyMigratable(ctx, js, "DEST", dest, []string{"shared"}, map[string][]byte{"shared": []byte("v")}, 1, nil)
-	if err != nil {
-		t.Fatalf("verify: %v", err)
-	}
-	if !result.Passed() || result.DestOnly != 1 || result.DestOnlyKeys[0] != "extra" {
-		t.Fatalf("unexpected result: %+v", result)
 	}
 }

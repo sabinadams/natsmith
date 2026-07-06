@@ -64,7 +64,7 @@ Packages under `internal/` describe **JetStream features or shared libraries**, 
 ```
 cmd/migrate/kv.go          orchestration — flags, workflow, progress wiring, exit codes
     ↓ calls
-internal/kv/               real work — scan streams, copy keys, verify values
+internal/kv/               real work — ListKeys migration, copy, verify
 internal/migration/        shared — config, cluster connect, summary, exit codes
 internal/nats/, progress/, workpool/   generic libraries
 ```
@@ -73,26 +73,26 @@ internal/nats/, progress/, workpool/   generic libraries
 
 - Cobra command definitions and flags
 - Building config from flags (`sharedBaseConfig`, `migration.NewKVConfig`, …)
-- The order of steps: connect → list buckets → for each bucket: scan → copy → verify
+- The order of steps: connect → list buckets → for each bucket: list keys → copy → verify
 - When to start/finish progress bars and which phase label to show
 - Aggregating per-bucket results into `migration.Summary` and choosing the exit code
 
 **Belongs in `internal/` (real work):**
 
-- Parsing JetStream streams and deriving bucket state (`kv.SnapshotFromStream`)
-- Parallel copy and skip-existing logic (`kv.CopyBucket`, `objects.CopyBucket`)
-- Verification comparisons (`kv.VerifyMigratable`)
+- Listing and parallel copy/verify of live KV keys (`kv.RunBucket`)
 - Listing/filtering buckets (`kv.ListBuckets`, `objects.ListBuckets`)
+- Parallel object copy (`objects.CopyBucket`)
 - Reusable connection, progress, and worker-pool primitives
 
-**Rule of thumb:** if you’re parsing `$KV.*` subjects, calling `dest.Put`, or reading stream messages, it belongs in `internal/<feature>/`. If you’re deciding *when* to call those functions and *what to do* when one fails, it stays in `cmd/`.
+**Rule of thumb:** if you’re calling `ListKeys`, `dest.Put`, or comparing KV values, it belongs in `internal/<feature>/`. If you’re deciding *when* to call those functions and *what to do* when one fails, it stays in `cmd/`.
 
 ### Internal package layout
 
 ```
-internal/migration/     config.go, cluster.go, summary.go
-internal/kv/            buckets.go, snapshot.go, copy.go, verify.go, report.go
+internal/migration/     config.go, cluster.go, summary.go, buckets.go
+internal/kv/            buckets.go, run_bucket.go, verify.go, report.go
 internal/objects/       buckets.go, snapshot.go, filter.go, copy.go, report.go
+internal/report/        shared stderr message formatting
 internal/nats/          conn.go, context.go — connect + NATS CLI context loading
 internal/progress/      stderr progress UI
 internal/workpool/      parallel worker pool
@@ -103,13 +103,11 @@ internal/integration/   cross-cluster integration test helpers
 | File | Responsibility |
 |------|----------------|
 | `buckets.go` | List/filter buckets for migration |
-| `snapshot.go` | Derive bucket state from backing streams |
-| `copy.go` | Write records to destination |
-| `verify.go` | Compare source vs destination (KV only) |
-| `filter.go` | Object-specific filtering helpers |
+| `run_bucket.go` | ListKeys → Get → Put migration pipeline |
+| `verify.go` | Verify results, reports, and dest-only checks |
 | `report.go` | Formatted status lines consumed by `cmd/` (not business logic) |
 
-`report.go` holds user-visible message strings so orchestration files stay focused on control flow. It does not perform JetStream I/O.
+`report.go` holds user-visible message strings so orchestration files stay focused on control flow. Shared formatting lives in `internal/report/`; domain-specific wrappers stay in each package. Neither performs JetStream I/O.
 
 ## Project layout
 
@@ -124,9 +122,10 @@ cmd/migrate/                  ← "natsmith migrate …"
 internal/nats/                ← connect + NATS CLI context loading (conn.go, context.go)
 internal/workpool/            ← parallel worker pool (reusable)
 internal/progress/            ← stderr progress UI (reusable)
-internal/migration/           ← shared config, cluster connect, summary, exit codes
-  config.go, cluster.go, summary.go
-internal/kv/                  ← KV buckets.go, snapshot.go, copy.go, verify.go, report.go
+internal/migration/           ← shared config, cluster connect, summary, exit codes, bucket filtering
+  config.go, cluster.go, summary.go, buckets.go
+internal/report/              ← shared stderr message formatting
+internal/kv/                  ← KV buckets.go, run_bucket.go, verify.go, report.go
 internal/objects/             ← objects buckets.go, snapshot.go, filter.go, copy.go, report.go
 
 internal/testutil/            ← unit test helpers

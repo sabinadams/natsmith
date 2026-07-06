@@ -1,15 +1,8 @@
 package kv
 
 import (
-	"bytes"
-	"context"
-	"errors"
 	"fmt"
 	"os"
-	"sync"
-
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/sabinadams/natsmith/internal/workpool"
 )
 
 // VerifyResult reports how destination keys compare to source migratable keys.
@@ -30,100 +23,6 @@ func (r VerifyResult) Passed() bool {
 
 func (r VerifyResult) Issues() int {
 	return r.Missing + r.Mismatch
-}
-
-// VerifyMigratable checks that every source migratable key exists on dest with the same value,
-// then reports destination keys not in the migratable set.
-func VerifyMigratable(
-	ctx context.Context,
-	destJS jetstream.JetStream,
-	bucket string,
-	dest jetstream.KeyValue,
-	migratable []string,
-	sourceValues map[string][]byte,
-	workers int,
-	report func(checked, total int),
-) (VerifyResult, error) {
-	result := VerifyResult{Expected: len(migratable)}
-
-	migratableSet := make(map[string]struct{}, len(migratable))
-	for _, key := range migratable {
-		migratableSet[key] = struct{}{}
-	}
-
-	if len(migratable) == 0 {
-		return result, verifyDestOnlyKeys(ctx, destJS, bucket, migratableSet, &result)
-	}
-
-	if report != nil {
-		report(0, len(migratable))
-	}
-
-	var checked int
-	var mu sync.Mutex
-	markChecked := func() {
-		checked++
-		if report != nil && (checked%100 == 0 || checked == len(migratable)) {
-			report(checked, len(migratable))
-		}
-	}
-
-	err := workpool.RunParallel(ctx, workers, migratable, func(ctx context.Context, key string) error {
-		sourceValue, ok := sourceValues[key]
-		if !ok {
-			return fmt.Errorf("verify key %q: no value from stream scan", key)
-		}
-
-		destEntry, err := dest.Get(ctx, key)
-		if err != nil {
-			if errors.Is(err, jetstream.ErrKeyNotFound) {
-				mu.Lock()
-				result.Missing++
-				result.MissingKeys = append(result.MissingKeys, key)
-				markChecked()
-				mu.Unlock()
-				return nil
-			}
-			return fmt.Errorf("verify dest key %q: %w", key, err)
-		}
-
-		if !bytes.Equal(sourceValue, destEntry.Value()) {
-			mu.Lock()
-			result.Mismatch++
-			result.MismatchKeys = append(result.MismatchKeys, key)
-			markChecked()
-			mu.Unlock()
-			return nil
-		}
-
-		mu.Lock()
-		result.OK++
-		markChecked()
-		mu.Unlock()
-		return nil
-	})
-	if err != nil {
-		return result, err
-	}
-
-	return result, verifyDestOnlyKeys(ctx, destJS, bucket, migratableSet, &result)
-}
-
-func verifyDestOnlyKeys(ctx context.Context, js jetstream.JetStream, bucket string, migratableSet map[string]struct{}, result *VerifyResult) error {
-	snap, err := SnapshotFromStream(ctx, js, bucket, nil)
-	if err != nil {
-		return fmt.Errorf("scan destination stream: %w", err)
-	}
-
-	for _, key := range snap.Migratable {
-		if _, ok := migratableSet[key]; ok {
-			continue
-		}
-		result.DestOnly++
-		result.DestOnlyKeys = append(result.DestOnlyKeys, key)
-	}
-
-	return nil
 }
 
 const maxSampleKeys = 20

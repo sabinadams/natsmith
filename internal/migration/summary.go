@@ -41,10 +41,11 @@ func PrintSummary(kind string, summary Summary) {
 	}
 
 	if summary.DryRun {
-		fmt.Fprintf(os.Stderr,
-			"\nAll %s dry run complete: %d buckets, %d migratable, %d omitted\n",
-			kind, summary.Buckets, summary.Migratable, summary.Omitted,
-		)
+		msg := fmt.Sprintf("\nAll %s dry run complete: %d buckets, %d migratable", kind, summary.Buckets, summary.Migratable)
+		if summary.Omitted > 0 {
+			msg += fmt.Sprintf(", %d omitted", summary.Omitted)
+		}
+		fmt.Fprintln(os.Stderr, msg)
 		return
 	}
 

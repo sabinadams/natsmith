@@ -31,6 +31,16 @@ func TestBucketBarFinish(t *testing.T) {
 	}
 }
 
+func TestReportScanListKeysNoProgress(t *testing.T) {
+	out := testutil.CaptureStderr(t, func() {
+		bar := &BucketBar{enabled: false, baseDesc: "KV schema (1/1) — listing keys"}
+		bar.ReportScan(ScanProgress{Scanned: 32000, Unique: 32000, UniqueLabel: "keys"})
+	})
+	if !strings.Contains(out, "32000 keys") {
+		t.Fatalf("output: %s", out)
+	}
+}
+
 func TestReportScanKVNoProgress(t *testing.T) {
 	out := testutil.CaptureStderr(t, func() {
 		bar := &BucketBar{enabled: false, baseDesc: "KV schema (1/1) — scanning stream"}

@@ -10,9 +10,21 @@ import (
 
 func TestPrintSummaryDryRun(t *testing.T) {
 	out := testutil.CaptureStderr(t, func() {
-		PrintSummary("KV", Summary{DryRun: true, Buckets: 2, Migratable: 10, Omitted: 3})
+		PrintSummary("KV", Summary{DryRun: true, Buckets: 2, Migratable: 10})
 	})
 	if !strings.Contains(out, "dry run") || !strings.Contains(out, "10 migratable") {
+		t.Fatalf("output: %s", out)
+	}
+	if strings.Contains(out, "omitted") {
+		t.Fatalf("KV dry run should not mention omitted: %s", out)
+	}
+}
+
+func TestPrintSummaryDryRunWithOmitted(t *testing.T) {
+	out := testutil.CaptureStderr(t, func() {
+		PrintSummary("object store", Summary{DryRun: true, Buckets: 1, Migratable: 5, Omitted: 2})
+	})
+	if !strings.Contains(out, "5 migratable") || !strings.Contains(out, "2 omitted") {
 		t.Fatalf("output: %s", out)
 	}
 }
@@ -87,7 +99,7 @@ func TestCompleteRunFailure(t *testing.T) {
 
 func TestCompleteRunPrintsSummary(t *testing.T) {
 	out := testutil.CaptureStderr(t, func() {
-		_ = CompleteRun("KV", Summary{DryRun: true, Buckets: 1, Migratable: 3, Omitted: 1}, 0)
+		_ = CompleteRun("KV", Summary{DryRun: true, Buckets: 1, Migratable: 3}, 0)
 	})
 	if !strings.Contains(out, "dry run") {
 		t.Fatalf("output: %s", out)

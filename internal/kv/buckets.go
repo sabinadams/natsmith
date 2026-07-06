@@ -10,11 +10,6 @@ import (
 // ListBuckets returns KV buckets on js matching cfg filters.
 func ListBuckets(ctx context.Context, js jetstream.JetStream, cfg migration.BaseConfig) ([]jetstream.KeyValueStatus, error) {
 	lister := js.KeyValueStores(ctx)
-	var buckets []jetstream.KeyValueStatus
-	for status := range lister.Status() {
-		if cfg.ShouldMigrateBucket(status.Bucket()) {
-			buckets = append(buckets, status)
-		}
-	}
+	buckets := migration.FilterBucketStatuses(cfg, lister.Status())
 	return buckets, lister.Error()
 }

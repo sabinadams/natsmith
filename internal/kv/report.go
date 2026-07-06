@@ -1,37 +1,29 @@
 package kv
 
-import "fmt"
+import (
+	"fmt"
 
-func ScanOKMessage(bucket string, index, total int, snap BucketSnapshot) string {
-	return fmt.Sprintf(
-		"  · KV %s (%d/%d) — %d listed, %d migratable, %d omitted (%d stream messages)",
-		bucket, index, total, len(snap.Listed), len(snap.Migratable), len(snap.Omitted), snap.MessageCount,
-	)
+	"github.com/sabinadams/natsmith/internal/report"
+)
+
+func ScanOKRunMessage(bucket string, index, total int, run BucketRunResult) string {
+	return report.BucketInfo(report.KindKV, bucket, index, total,
+		fmt.Sprintf("%d migratable keys", run.Migratable))
 }
 
 func ScanFailMessage(bucket string, index, total int, err error) string {
-	return fmt.Sprintf("  ✗ KV %s (%d/%d) — failed to scan bucket: %v", bucket, index, total, err)
+	return report.BucketError(report.KindKV, bucket, index, total, "failed", err)
 }
 
 func DestBucketMissingMessage(bucket string, index, total int, err error) string {
-	return fmt.Sprintf("  ✗ KV %s (%d/%d) — destination bucket not found: %v", bucket, index, total, err)
-}
-
-func CopyFailMessage(bucket string, index, total int, err error) string {
-	return fmt.Sprintf("  ✗ KV %s (%d/%d) — migration failed: %v", bucket, index, total, err)
+	return report.BucketError(report.KindKV, bucket, index, total, "destination bucket not found", err)
 }
 
 func CopyCountMismatchMessage(bucket string, expected, migrated, skipped int) string {
-	return fmt.Sprintf(
-		"  ✗ KV %s — expected %d migrated, got %d (skipped=%d)",
-		bucket, expected, migrated, skipped,
-	)
-}
-
-func VerifyFailMessage(bucket string, index, total int, err error) string {
-	return fmt.Sprintf("  ✗ KV %s (%d/%d) — verify failed: %v", bucket, index, total, err)
+	return report.BucketIssue(report.KindKV, bucket,
+		fmt.Sprintf("expected %d migrated, got %d (skipped=%d)", expected, migrated, skipped))
 }
 
 func FailuresFileErrorMessage(bucket string, err error) string {
-	return fmt.Sprintf("  ✗ KV %s — failed to write failures file: %v", bucket, err)
+	return report.BucketIssue(report.KindKV, bucket, fmt.Sprintf("failed to write failures file: %v", err))
 }
