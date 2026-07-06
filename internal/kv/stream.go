@@ -187,7 +187,12 @@ func RestoreBucket(
 		}))
 	}
 
-	_, state, err := mgr.RestoreSnapshotFromDirectory(ctx, streamName, dir, opts...)
+	// JSM starts a trackBps goroutine tied to ctx; cancel when this restore
+	// finishes so completed buckets stop emitting progress callbacks.
+	restoreCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	_, state, err := mgr.RestoreSnapshotFromDirectory(restoreCtx, streamName, dir, opts...)
 	if err != nil {
 		return RestoreResult{}, fmt.Errorf("restore stream %q: %w", streamName, err)
 	}

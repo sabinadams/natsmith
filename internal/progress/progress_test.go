@@ -99,6 +99,23 @@ func TestReportTransferThrottled(t *testing.T) {
 	}
 }
 
+func TestReportTransferAfterClose(t *testing.T) {
+	out := testutil.CaptureStderr(t, func() {
+		bar := &BucketBar{
+			enabled:       false,
+			baseDesc:      "KV lock (6/10) — restoring",
+			transferTotal: 65536,
+		}
+		bar.ReportTransfer(986)
+		bar.Close()
+		bar.ReportTransfer(986)
+		bar.ReportTransfer(65536)
+	})
+	if strings.Count(out, "restoring") != 1 {
+		t.Fatalf("expected one line before close, got: %q", out)
+	}
+}
+
 func TestTransferTrackerUpgradesBar(t *testing.T) {
 	_ = testutil.CaptureStderr(t, func() {
 		p := NewProgress(false)

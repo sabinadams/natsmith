@@ -37,6 +37,7 @@ func NewProgress(enabled bool) *Progress {
 // BucketBar tracks progress for a single KV bucket or object store.
 type BucketBar struct {
 	enabled            bool
+	closed             bool
 	bar                *progressbar.ProgressBar
 	bar64              *progressbar.ProgressBar
 	baseDesc           string
@@ -140,6 +141,13 @@ func (b *BucketBar) ReportTransfer(sent int64) {
 	if sent < 0 {
 		return
 	}
+
+	b.mu.Lock()
+	if b.closed {
+		b.mu.Unlock()
+		return
+	}
+	b.mu.Unlock()
 
 	if b.enabled && b.bar64 != nil {
 		b.mu.Lock()
@@ -315,6 +323,10 @@ func (b *BucketBar) Finish(_ ItemStats) {
 
 // Close shuts down any active progress bar without printing a summary line.
 func (b *BucketBar) Close() {
+	b.mu.Lock()
+	b.closed = true
+	b.mu.Unlock()
+
 	if b.bar64 != nil {
 		_, _ = io.WriteString(os.Stderr, "\n")
 		_ = b.bar64.Close()
