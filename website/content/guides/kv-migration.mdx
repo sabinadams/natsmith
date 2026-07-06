@@ -37,24 +37,51 @@ Two ways to move KV data between clusters:
 
 ## Production workflow
 
+### 1. Baseline counts (optional)
+
 ```bash
-# 1. Baseline counts (optional)
 natsmith migrate kv --dry-run \
-  --source-context <source> --dest-context <dest>
-
-# 2a. Large buckets — backup source, restore dest
-natsmith backup kv --context <source> --dir ./backups
-# copy ./backups to a host that can reach dest
-natsmith restore kv --context <dest> --dir ./backups --force
-
-# 2b. Small buckets — direct copy
-natsmith migrate kv --source-context <source> --dest-context <dest> \
-  --workers 32 --no-verify
-
-# 3. Confirm
-natsmith migrate kv --verify-only \
-  --source-context <source> --dest-context <dest> --workers 32
+  --source-context sandbox-legacy \
+  --dest-context sandbox-dedicated
 ```
+
+### 2a. Large buckets — backup and restore
+
+```bash
+natsmith backup kv \
+  --context sandbox-legacy \
+  --dir ./backups/sandbox-legacy
+```
+
+Copy `./backups/sandbox-legacy` to a host that can reach the destination cluster, then:
+
+```bash
+natsmith restore kv \
+  --context sandbox-dedicated \
+  --dir ./backups/sandbox-legacy \
+  --force
+```
+
+### 2b. Small buckets — direct copy
+
+```bash
+natsmith migrate kv \
+  --source-context sandbox-legacy \
+  --dest-context sandbox-dedicated \
+  --workers 32 \
+  --no-verify
+```
+
+### 3. Confirm
+
+```bash
+natsmith migrate kv --verify-only \
+  --source-context sandbox-legacy \
+  --dest-context sandbox-dedicated \
+  --workers 32
+```
+
+## Notes
 
 ### Partial migrate on destination
 
@@ -66,7 +93,7 @@ Backup and restore all buckets are **single commands** (they loop internally). U
 
 ## See also
 
-- [`migrate kv`](/commands/migrate/kv) — flags and examples
+- [`migrate kv`](/commands/migrate/kv)
 - [`backup kv`](/commands/backup/kv)
 - [`restore kv`](/commands/restore/kv)
 - [Troubleshooting](/troubleshooting)

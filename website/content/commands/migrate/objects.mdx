@@ -1,10 +1,10 @@
-# objects
+# migrate objects
 
 ```bash
 natsmith migrate objects [flags]
 ```
 
-Copies object blobs and recreates link objects in a second pass.
+Copy object blobs and recreate link objects in a second pass.
 
 | Behavior | Detail |
 |----------|--------|
@@ -14,31 +14,17 @@ Copies object blobs and recreates link objects in a second pass.
 | Timeouts | Each copy uses at least 5 minutes; raise `--timeout` for large files |
 | Concurrency | Lower `--workers` (e.g. 8) for buckets with very large objects |
 
-**Dry-run output:** `listed`, `meta-active`, `meta-omitted` per bucket.
-
-**Full run output:** `listed`, `migratable`, `omitted`, then `N/N copied` with optional `(N failed)`.
-
-No verify mode (unlike KV). See [Guides](/guides) and the [migrate overview](/commands/migrate).
-
 ## Flags
 
-### Connection
+Inherits all [migrate](/commands/migrate) flags. No object-specific flags.
 
-Same connection flags as [`migrate kv`](/commands/migrate/kv).
+## Output
 
-### Shared
+**Dry-run:** `listed`, `meta-active`, `meta-omitted` per bucket.
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--bucket` | all | Comma-separated buckets to migrate |
-| `--omit` | — | Comma-separated buckets to skip |
-| `--dry-run` | `false` | List buckets and records without writing |
-| `--skip-existing` | `false` | Skip records that already exist on destination |
-| `--workers` | `1` | Concurrent workers (1–64) |
-| `--timeout` | `30s` | Per-request NATS timeout |
-| `--no-progress` | `false` | Plain log output (useful in CI) |
+**Full run:** `listed`, `migratable`, `omitted`, then `N/N copied` with optional `(N failed)`.
 
-Use `--bucket` to select buckets, `--omit` to exclude them, or both (`--bucket` first, then `--omit` removes from that set).
+No verify mode (unlike KV).
 
 ## Examples
 
@@ -47,7 +33,7 @@ Use `--bucket` to select buckets, `--omit` to exclude them, or both (`--bucket` 
 ```bash
 natsmith migrate objects --dry-run \
   --source-context sandbox-legacy \
-  --dest-context sandbox \
+  --dest-context sandbox-dedicated \
   --workers 16
 ```
 
@@ -56,7 +42,7 @@ natsmith migrate objects --dry-run \
 ```bash
 natsmith migrate objects \
   --source-context sandbox-legacy \
-  --dest-context sandbox \
+  --dest-context sandbox-dedicated \
   --workers 16 \
   --timeout 5m
 ```
@@ -66,8 +52,13 @@ natsmith migrate objects \
 ```bash
 natsmith migrate objects \
   --source-context sandbox-legacy \
-  --dest-context sandbox \
+  --dest-context sandbox-dedicated \
   --bucket my-bucket \
   --workers 16 \
   --timeout 5m
 ```
+
+## See also
+
+- [migrate](/commands/migrate)
+- [Troubleshooting](/troubleshooting#migrate-objects)

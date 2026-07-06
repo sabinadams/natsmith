@@ -24,14 +24,18 @@ Inherits all [backup](/commands/backup) flags.
 
 ## Examples
 
+### Backup one bucket
+
 ```bash
-# One bucket (permission check / pilot)
 natsmith backup kv \
   --context sandbox-legacy \
   --dir ./backups/sandbox-legacy \
   --bucket schema
+```
 
-# All buckets
+### Backup all buckets
+
+```bash
 natsmith backup kv \
   --context sandbox-legacy \
   --dir ./backups/sandbox-legacy

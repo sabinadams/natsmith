@@ -21,14 +21,18 @@ Inherits all [restore](/commands/restore) flags.
 
 ## Examples
 
+### Restore all buckets
+
 ```bash
-# All buckets from a backup tree
 natsmith restore kv \
   --context sandbox-dedicated \
   --dir ./backups/sandbox-legacy \
   --force
+```
 
-# One bucket
+### Restore one bucket
+
+```bash
 natsmith restore kv \
   --context sandbox-dedicated \
   --dir ./backups/sandbox-legacy/schema \

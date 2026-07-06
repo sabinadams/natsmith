@@ -29,24 +29,53 @@ Success: `N/N migratable copied` and `verify: N ok, 0 missing, 0 mismatch, 0 des
 
 ## Examples
 
+### Dry-run all buckets
+
 ```bash
-# Count keys (no I/O)
 natsmith migrate kv --dry-run \
-  --source-context sandbox-legacy --dest-context sandbox-dedicated
+  --source-context sandbox-legacy \
+  --dest-context sandbox-dedicated
+```
 
-# Copy all buckets
+### Migrate all buckets
+
+```bash
 natsmith migrate kv \
-  --source-context sandbox-legacy --dest-context sandbox-dedicated \
-  --workers 32 --failures-file kv-failures.log
+  --source-context sandbox-legacy \
+  --dest-context sandbox-dedicated \
+  --workers 32 \
+  --failures-file kv-failures.log
+```
 
-# One bucket
-natsmith migrate kv ... --bucket schema --workers 32
+### Migrate one bucket
 
-# Compare only
-natsmith migrate kv --verify-only ... --bucket schema --workers 16
+```bash
+natsmith migrate kv \
+  --source-context sandbox-legacy \
+  --dest-context sandbox-dedicated \
+  --bucket schema \
+  --workers 32 \
+  --failures-file kv-failures.log
+```
 
-# Resume interrupted run
-natsmith migrate kv ... --skip-existing --workers 32
+### Verify only
+
+```bash
+natsmith migrate kv --verify-only \
+  --source-context sandbox-legacy \
+  --dest-context sandbox-dedicated \
+  --bucket schema \
+  --workers 16
+```
+
+### Resume an interrupted run
+
+```bash
+natsmith migrate kv \
+  --source-context sandbox-legacy \
+  --dest-context sandbox-dedicated \
+  --skip-existing \
+  --workers 32
 ```
 
 ## Notes

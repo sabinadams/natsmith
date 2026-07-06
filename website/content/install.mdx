@@ -50,7 +50,9 @@ For Go developers who already have Go 1.25+ installed:
 
 ```bash
 export PATH="$(go env GOPATH)/bin:$PATH"   # add to ~/.zshrc or ~/.bashrc to persist
+```
 
+```bash
 go install github.com/sabinadams/natsmith/cmd/natsmith@latest
 natsmith migrate kv -h
 ```
@@ -83,6 +85,9 @@ Go users:
 
 ```bash
 go install github.com/sabinadams/natsmith/cmd/natsmith@latest
+```
+
+```bash
 go version -m "$(command -v natsmith)"
 ```
 
