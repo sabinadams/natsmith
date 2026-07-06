@@ -29,7 +29,10 @@ func init() {
 }
 
 func runKVRestore(cfg migration.EndpointConfig) error {
-	session := progress.NewSession(!cfg.NoProgress, "KV restore")
+	session := progress.NewSession(progress.SessionConfig{
+		Title:      "KV restore",
+		NoProgress: cfg.NoProgress,
+	})
 	session.Status("Connecting...")
 
 	nc, mgr, err := nats.ConnectJSM(cfg.URL, cfg.Creds, cfg.RequestTimeout)
@@ -49,6 +52,25 @@ func runKVRestore(cfg migration.EndpointConfig) error {
 	}
 
 	ctx := nats.RunContext()
+
+	flags := []string{}
+	if shared.force {
+		flags = append(flags, "--force")
+	}
+	if shared.replicas > 0 {
+		flags = append(flags, fmt.Sprintf("--replicas=%d", shared.replicas))
+	}
+	if cfg.NoProgress {
+		flags = append(flags, "--no-progress")
+	}
+
+	session.PrintPlan([]progress.PlanEntry{
+		{Label: "Context", Value: shared.context},
+		{Label: "Source", Value: shared.dir},
+		{Label: "Buckets", Value: progress.FormatBucketCount(len(dirs), shared.bucket)},
+		{Label: "Flags", Value: progress.JoinFlags(flags...)},
+	})
+
 	exitCode := 0
 	completed := 0
 
@@ -70,6 +92,7 @@ func runKVRestore(cfg migration.EndpointConfig) error {
 		}
 		bucket, _ := kv.BucketFromStreamName(meta.Config.Name)
 
+		session.BeginBucket()
 		transfer := session.UI.StartTransferTracked(report.KindKV, bucket, index, total, "restoring", dataSize)
 		var reportFn kv.TransferReporter
 		if !cfg.NoProgress {
@@ -90,13 +113,14 @@ func runKVRestore(cfg migration.EndpointConfig) error {
 			continue
 		}
 
-		session.BucketSuccess(report.KindKV, result.Bucket, index, total,
+		session.BucketSuccessStats(report.KindKV, result.Bucket, index, total,
 			fmt.Sprintf("%d messages, %d bytes restored from %s", result.Messages, result.Bytes, dir),
+			progress.BucketStats{Items: int64(result.Messages), Bytes: int64(result.Bytes)},
 		)
 		completed++
 	}
 
-	session.Completef("KV restore complete: %d/%d buckets from %s", completed, len(dirs), shared.dir)
+	session.Completef(exitCode, "KV restore complete: %d/%d buckets from %s", completed, len(dirs), shared.dir)
 	if exitCode != 0 {
 		return &migration.ExitError{Code: exitCode}
 	}

@@ -14,6 +14,19 @@ natsmith <command> [flags]
 | [`backup`](/commands/backup) | `natsmith backup kv …` — export streams to disk |
 | [`restore`](/commands/restore) | `natsmith restore kv …` — import streams from disk |
 
+## Global flags
+
+Persistent on the root command (all subcommands):
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--quiet` | `false` | Errors and final summary only |
+| `--json` | `false` | Structured NDJSON events on stdout |
+
 Each group page lists shared flags. Subcommand pages (`kv`, `objects`) list command-specific flags and examples.
+
+## Output
+
+Long-running commands print a **run plan** (context, bucket count, flags), per-bucket progress bars, and a footer with elapsed time. Use `--no-progress` on a command group for plain stderr lines. Set `NO_COLOR=1` to disable ANSI styling.
 
 For workflow guidance, see [Guides](/guides).

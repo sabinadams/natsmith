@@ -2,13 +2,12 @@ package migrate
 
 import (
 	"fmt"
-	"log"
-	"os"
 
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/sabinadams/natsmith/internal/kv"
 	"github.com/sabinadams/natsmith/internal/migration"
 	"github.com/sabinadams/natsmith/internal/progress"
+	"github.com/sabinadams/natsmith/internal/report"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +46,10 @@ func runKV(cfg migration.KVConfig) error {
 	if cfg.VerifyOnly {
 		title = "KV verification"
 	}
-	session := progress.NewSession(!cfg.NoProgress, title)
+	session := progress.NewSession(progress.SessionConfig{
+		Title:      title,
+		NoProgress: cfg.NoProgress,
+	})
 
 	clusters, err := migration.ConnectClusters(cfg.BaseConfig, session.Status)
 	if err != nil {
@@ -60,6 +62,14 @@ func runKV(cfg migration.KVConfig) error {
 		return fmt.Errorf("list KV buckets: %w", err)
 	}
 
+	flags := migratePlanFlags(cfg.BaseConfig, cfg.Verify, cfg.VerifyOnly, kvOpts.failuresFile)
+	session.PrintPlan([]progress.PlanEntry{
+		{Label: "Source", Value: shared.sourceContext},
+		{Label: "Dest", Value: shared.destContext},
+		{Label: "Buckets", Value: progress.FormatBucketCount(len(buckets), shared.bucket)},
+		{Label: "Flags", Value: progress.JoinFlags(flags...)},
+	})
+
 	summary := migration.Summary{
 		DryRun:     cfg.DryRun,
 		VerifyOnly: cfg.VerifyOnly,
@@ -67,8 +77,14 @@ func runKV(cfg migration.KVConfig) error {
 	exitCode := 0
 
 	for i, status := range buckets {
+		if session.Interrupted() {
+			exitCode = 1
+			break
+		}
+
 		bucket := status.Bucket()
 		index, total := i+1, len(buckets)
+		session.BeginBucket()
 
 		scanBar := session.UI.StartIndeterminate("KV", bucket, index, total, "listing keys")
 
@@ -77,7 +93,8 @@ func runKV(cfg migration.KVConfig) error {
 			var err error
 			destKV, err = clusters.DestJS.KeyValue(clusters.Ctx, bucket)
 			if err != nil {
-				scanBar.FinishMessage(kv.DestBucketMissingMessage(bucket, index, total, err))
+				scanBar.Close()
+				session.BucketFail(report.KindKV, bucket, index, total, "destination bucket not found", err)
 				exitCode = 1
 				continue
 			}
@@ -108,44 +125,53 @@ func runKV(cfg migration.KVConfig) error {
 			actionBar,
 		)
 		if err != nil {
-			scanBar.FinishMessage(kv.ScanFailMessage(bucket, index, total, err))
+			scanBar.Close()
 			if actionBar != nil {
-				actionBar.FinishMessage("")
+				actionBar.Close()
 			}
+			session.BucketFail(report.KindKV, bucket, index, total, "failed", err)
 			exitCode = 1
 			continue
 		}
-		scanBar.FinishMessage(kv.ScanOKRunMessage(bucket, index, total, run))
+		scanBar.Close()
+
+		detail := fmt.Sprintf("%d migratable keys", run.Migratable)
+		if run.GhostSkipped > 0 {
+			detail = fmt.Sprintf("%s (%d ghost skipped)", detail, run.GhostSkipped)
+		}
+		session.BucketInfoStats(report.KindKV, bucket, index, total, detail, progress.BucketStats{Items: int64(run.Migratable)})
 
 		summary.Migratable += run.Migratable
 
 		if cfg.DryRun {
 			summary.Buckets++
+			if actionBar != nil {
+				actionBar.Close()
+			}
 			continue
 		}
 
 		if actionBar != nil {
-			if cfg.VerifyOnly {
-				actionBar.FinishMessage("")
-			} else {
-				actionBar.Finish(run.Copy)
-			}
+			actionBar.Close()
 		}
 
 		if !cfg.VerifyOnly {
+			session.BucketCopied(report.KindKV, bucket, index, total, run.Copy)
 			summary.Migrated += run.Copy.Migrated
 			summary.Skipped += run.Copy.Skipped
 
 			if !cfg.SkipExisting && run.Copy.Migrated != run.Migratable {
-				fmt.Fprintln(log.Writer(), kv.CopyCountMismatchMessage(bucket, run.Migratable, run.Copy.Migrated, run.Copy.Skipped))
+				session.BucketIssue(report.KindKV, bucket,
+					fmt.Sprintf("expected %d migrated, got %d (skipped=%d)", run.Migratable, run.Copy.Migrated, run.Copy.Skipped))
 				exitCode = 1
 			}
 		}
 
 		if cfg.Verify {
-			kv.PrintVerifyReport(bucket, run.Verify)
+			kv.ReportVerify(session, bucket, run.Verify)
 			if run.DestOnlySkipped {
-				fmt.Fprintf(os.Stderr, "  ! verify %s: skipped dest-only scan (%d migratable keys exceeds limit)\n", bucket, run.Migratable)
+				session.BucketWarning(report.KindKV, bucket,
+					fmt.Sprintf("skipped dest-only scan (%d migratable keys exceeds limit)", run.Migratable))
 			}
 
 			summary.VerifyRan = true
@@ -155,7 +181,7 @@ func runKV(cfg migration.KVConfig) error {
 
 			if cfg.FailuresFile != "" && (run.Verify.Issues() > 0 || run.Verify.DestOnly > 0) {
 				if err := kv.WriteFailuresFile(cfg.FailuresFile, bucket, run.Verify); err != nil {
-					fmt.Fprintln(log.Writer(), kv.FailuresFileErrorMessage(bucket, err))
+					session.BucketIssue(report.KindKV, bucket, fmt.Sprintf("failed to write failures file: %v", err))
 					exitCode = 1
 				}
 			}
@@ -168,5 +194,33 @@ func runKV(cfg migration.KVConfig) error {
 		summary.Buckets++
 	}
 
-	return migration.CompleteRun("KV", summary, exitCode)
+	if session.Interrupted() {
+		exitCode = 1
+	}
+	return migration.CompleteRun("KV", summary, exitCode, session)
+}
+
+func migratePlanFlags(base migration.BaseConfig, verify bool, verifyOnly bool, failuresFile string) []string {
+	var flags []string
+	if base.DryRun {
+		flags = append(flags, "--dry-run")
+	}
+	if base.SkipExisting {
+		flags = append(flags, "--skip-existing")
+	}
+	if base.NoProgress {
+		flags = append(flags, "--no-progress")
+	}
+	if base.Workers > 1 {
+		flags = append(flags, fmt.Sprintf("--workers=%d", base.Workers))
+	}
+	if verifyOnly {
+		flags = append(flags, "--verify-only")
+	} else if verify {
+		flags = append(flags, "--verify")
+	}
+	if failuresFile != "" {
+		flags = append(flags, "--failures-file")
+	}
+	return flags
 }

@@ -29,7 +29,10 @@ func init() {
 }
 
 func runKVBackup(cfg migration.EndpointConfig) error {
-	session := progress.NewSession(!cfg.NoProgress, "KV backup")
+	session := progress.NewSession(progress.SessionConfig{
+		Title:      "KV backup",
+		NoProgress: cfg.NoProgress,
+	})
 	session.Status("Connecting...")
 
 	nc, mgr, err := nats.ConnectJSM(cfg.URL, cfg.Creds, cfg.RequestTimeout)
@@ -53,6 +56,13 @@ func runKVBackup(cfg migration.EndpointConfig) error {
 		return fmt.Errorf("list KV buckets: %w", err)
 	}
 
+	session.PrintPlan([]progress.PlanEntry{
+		{Label: "Context", Value: shared.context},
+		{Label: "Output", Value: shared.dir},
+		{Label: "Buckets", Value: progress.FormatBucketCount(len(buckets), shared.bucket)},
+		{Label: "Flags", Value: progress.JoinFlags(flagLabel(cfg.NoProgress, "no-progress"))},
+	})
+
 	exitCode := 0
 	completed := 0
 	for i, status := range buckets {
@@ -60,6 +70,7 @@ func runKVBackup(cfg migration.EndpointConfig) error {
 		index, total := i+1, len(buckets)
 		outDir := kv.BackupDirForBucket(shared.dir, bucket)
 
+		session.BeginBucket()
 		transfer := session.UI.StartTransferTracked(report.KindKV, bucket, index, total, "backing up", 0)
 		var reportFn kv.TransferReporter
 		if !cfg.NoProgress {
@@ -76,15 +87,23 @@ func runKVBackup(cfg migration.EndpointConfig) error {
 			continue
 		}
 
-		session.BucketSuccess(report.KindKV, bucket, index, total,
+		session.BucketSuccessStats(report.KindKV, bucket, index, total,
 			fmt.Sprintf("%d messages, %d bytes → %s", result.Messages, result.Bytes, result.Dir),
+			progress.BucketStats{Items: int64(result.Messages), Bytes: int64(result.Bytes)},
 		)
 		completed++
 	}
 
-	session.Completef("KV backup complete: %d/%d buckets under %s", completed, len(buckets), shared.dir)
+	session.Completef(exitCode, "KV backup complete: %d/%d buckets under %s", completed, len(buckets), shared.dir)
 	if exitCode != 0 {
 		return &migration.ExitError{Code: exitCode}
 	}
 	return nil
+}
+
+func flagLabel(enabled bool, name string) string {
+	if enabled {
+		return "--" + name
+	}
+	return ""
 }

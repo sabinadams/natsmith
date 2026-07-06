@@ -26,8 +26,10 @@ Persistent on `backup`:
 | `--dir` | — | Output directory (required) |
 | `--bucket` | all | Comma-separated bucket filter |
 | `--omit` | — | Comma-separated buckets to skip |
-| `--no-progress` | `false` | Plain stderr |
+| `--no-progress` | `false` | Plain stderr (no progress bars) |
 | `--timeout` | `30s` | Per-request NATS timeout |
+
+Root flags [`--quiet`](/commands#global-flags) and [`--json`](/commands#global-flags) also apply.
 
 Pair with [`restore`](/commands/restore) on the destination cluster. See [KV migration](/guides/kv-migration) for when to use this vs [`migrate kv`](/commands/migrate/kv).
 

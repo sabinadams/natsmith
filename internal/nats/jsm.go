@@ -1,7 +1,6 @@
 package nats
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -27,9 +26,4 @@ func ConnectJSM(url, creds string, requestTimeout time.Duration) (*nats.Conn, *j
 	}
 
 	return nc, mgr, nil
-}
-
-// RunContext returns a background context for a single-cluster operation.
-func RunContext() context.Context {
-	return context.Background()
 }

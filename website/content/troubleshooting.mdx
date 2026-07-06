@@ -8,7 +8,7 @@
 | `command not found` after `go install`                             | Add `$(go env GOPATH)/bin` to your `PATH`                                                                                                               |
 | Install script fails to download                                   | No release for your OS/arch, or GitHub API rate limit — try [Homebrew](/install#homebrew-macos--linux) or a [manual download](/install#github-releases) |
 | `brew install sabinadams/natsmith/natsmith` — repository not found | The tap repo was missing; it lives at [homebrew-natsmith](https://github.com/sabinadams/homebrew-natsmith). Re-run the install command                  |
-| `go install …@latest` fails on old tag                             | Use `@v1.2.1` or newer; see [Install](/install#with-go)                                                                                                 |
+| `go install …@latest` fails on old tag                             | Use `@v1.2.2` or newer; see [Install](/install#with-go)                                                                                                 |
 
 ## Connection
 
@@ -42,3 +42,20 @@ See [`migrate kv`](/commands/migrate/kv) for flags and examples.
 | Link migration fails               | Linked bucket or object not migrated yet                                               |
 
 See [`migrate objects`](/commands/migrate/objects) for flags and examples.
+
+## backup / restore
+
+| Problem | Likely cause |
+| ------- | ------------ |
+| Progress bar not shown | stderr is not a TTY (CI, piped output) — use `--no-progress` for plain lines |
+| Garbled output when logging | Redirect stderr or use `--quiet` / `--json` |
+| `stream already exists` on restore | Add `--force` to replace existing `KV_*` streams |
+| Restore appears slow on huge buckets | Expected — footer shows elapsed time; use `tmux` for long runs |
+
+## Output
+
+| Problem | Likely cause |
+| ------- | ------------ |
+| No colors | `NO_COLOR` is set or stderr is not a terminal |
+| Too much output | Use `--quiet` (errors + summary) or `--json` (machine-readable stdout) |
+| Interrupted run | Ctrl+C cancels the active bucket; footer shows `Interrupted` |

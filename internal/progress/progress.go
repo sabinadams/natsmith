@@ -25,6 +25,9 @@ type ItemStats struct {
 }
 
 func NewProgress(enabled bool) *Progress {
+	if IsQuiet() || IsJSON() {
+		enabled = false
+	}
 	if enabled && !term.IsTerminal(int(os.Stderr.Fd())) {
 		enabled = false
 	}
@@ -60,20 +63,15 @@ func (p *Progress) StartBucket(kind, name string, index, total, items, workers i
 		items,
 		progressbar.OptionSetDescription(prefix),
 		progressbar.OptionSetWriter(os.Stderr),
-		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionEnableColorCodes(UseColor()),
 		progressbar.OptionShowCount(),
 		progressbar.OptionShowIts(),
 		progressbar.OptionSetItsString("items"),
+		progressbar.OptionShowElapsedTimeOnFinish(),
 		progressbar.OptionThrottle(65*time.Millisecond),
 		progressbar.OptionFullWidth(),
 		progressbar.OptionSetPredictTime(true),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "[green]=[reset]",
-			SaucerHead:    "[green]>[reset]",
-			SaucerPadding: " ",
-			BarStart:      "[cyan][[reset]",
-			BarEnd:        "[cyan]][reset]",
-		}),
+		progressbar.OptionSetTheme(barTheme()),
 	)
 
 	return b
@@ -93,7 +91,7 @@ func (p *Progress) StartIndeterminate(kind, name string, index, total int, messa
 		progressbar.OptionSetDescription(desc),
 		progressbar.OptionSetWriter(os.Stderr),
 		progressbar.OptionSpinnerType(14),
-		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionEnableColorCodes(UseColor()),
 		progressbar.OptionFullWidth(),
 	)
 
@@ -124,19 +122,14 @@ func (p *Progress) StartTransfer(kind, name string, index, total int, verb strin
 		totalBytes,
 		progressbar.OptionSetDescription(desc),
 		progressbar.OptionSetWriter(os.Stderr),
-		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionEnableColorCodes(UseColor()),
 		progressbar.OptionShowBytes(true),
 		progressbar.OptionShowCount(),
+		progressbar.OptionShowElapsedTimeOnFinish(),
 		progressbar.OptionThrottle(100*time.Millisecond),
 		progressbar.OptionFullWidth(),
 		progressbar.OptionSetPredictTime(true),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "[green]=[reset]",
-			SaucerHead:    "[green]>[reset]",
-			SaucerPadding: " ",
-			BarStart:      "[cyan][[reset]",
-			BarEnd:        "[cyan]][reset]",
-		}),
+		progressbar.OptionSetTheme(barTheme()),
 	)
 
 	return b
@@ -200,16 +193,7 @@ func shouldReportTransfer(b *BucketBar, sent int64) bool {
 
 // FinishTransfer closes an active transfer progress bar.
 func (b *BucketBar) FinishTransfer() {
-	if b.bar64 != nil {
-		_, _ = io.WriteString(os.Stderr, "\n")
-		_ = b.bar64.Close()
-		b.bar64 = nil
-	}
-	if b.bar != nil && b.transferTotal <= 0 {
-		_, _ = io.WriteString(os.Stderr, "\n")
-		_ = b.bar.Close()
-		b.bar = nil
-	}
+	b.Close()
 }
 
 // TransferTracker owns a transfer bar and upgrades to a sized bar when total bytes are known.
@@ -325,38 +309,32 @@ func (b *BucketBar) ReportScan(p ScanProgress) {
 	}
 }
 
-func (b *BucketBar) Finish(stats ItemStats) {
+func (b *BucketBar) Finish(_ ItemStats) {
+	b.Close()
+}
+
+// Close shuts down any active progress bar without printing a summary line.
+func (b *BucketBar) Close() {
+	if b.bar64 != nil {
+		_, _ = io.WriteString(os.Stderr, "\n")
+		_ = b.bar64.Close()
+		b.bar64 = nil
+	}
 	if b.bar != nil {
 		_, _ = io.WriteString(os.Stderr, "\n")
 		_ = b.bar.Close()
-	}
-
-	if b.baseDesc == "" {
-		return
-	}
-
-	summary := fmt.Sprintf("  ✓ %s — %d/%d copied", b.baseDesc, stats.Migrated, stats.Total)
-	if stats.Skipped > 0 {
-		summary += fmt.Sprintf(" (%d skipped)", stats.Skipped)
-	}
-	if stats.Failed > 0 {
-		summary += fmt.Sprintf(" (%d failed)", stats.Failed)
-	}
-	fmt.Fprintln(os.Stderr, summary)
-}
-
-func (b *BucketBar) FinishMessage(message string) {
-	if b.bar != nil {
-		_, _ = io.WriteString(os.Stderr, "\n")
-		_ = b.bar.Close()
-	}
-	if message != "" {
-		fmt.Fprintln(os.Stderr, message)
+		b.bar = nil
 	}
 }
 
-func PrintHeader(title string) {
-	fmt.Fprintf(os.Stderr, "\n%s\n\n", title)
+func barTheme() progressbar.Theme {
+	return progressbar.Theme{
+		Saucer:        "[green]=[reset]",
+		SaucerHead:    "[green]>[reset]",
+		SaucerPadding: " ",
+		BarStart:      "[cyan][[reset]",
+		BarEnd:        "[cyan]][reset]",
+	}
 }
 
 func truncateMiddle(s string, max int) string {

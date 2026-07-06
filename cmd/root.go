@@ -18,6 +18,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	registerOutputFlags(rootCmd)
 	rootCmd.AddCommand(migratecmd.Command())
 	rootCmd.AddCommand(backupcmd.Command())
 	rootCmd.AddCommand(restorecmd.Command())

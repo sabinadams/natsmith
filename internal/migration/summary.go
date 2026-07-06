@@ -3,6 +3,8 @@ package migration
 import (
 	"fmt"
 	"os"
+
+	"github.com/sabinadams/natsmith/internal/progress"
 )
 
 // ExitError signals a non-zero process exit code from a command handler to cmd.Execute.
@@ -30,26 +32,24 @@ type Summary struct {
 	VerifyOnly   bool
 }
 
-// PrintSummary writes a final migration report to stderr.
-func PrintSummary(kind string, summary Summary) {
+// SummaryMessage builds the migration footer headline (without status prefix or elapsed).
+func SummaryMessage(kind string, summary Summary) string {
 	if summary.VerifyOnly {
-		fmt.Fprintf(os.Stderr,
-			"\nAll %s verification complete: %d buckets, %d migratable checked, %d ok, %d failed, %d dest-only\n",
+		return fmt.Sprintf(
+			"All %s verification complete: %d buckets, %d migratable checked, %d ok, %d failed, %d dest-only",
 			kind, summary.Buckets, summary.Migratable, summary.VerifyOK, summary.VerifyFailed, summary.DestOnly,
 		)
-		return
 	}
 
 	if summary.DryRun {
-		msg := fmt.Sprintf("\nAll %s dry run complete: %d buckets, %d migratable", kind, summary.Buckets, summary.Migratable)
+		msg := fmt.Sprintf("All %s dry run complete: %d buckets, %d migratable", kind, summary.Buckets, summary.Migratable)
 		if summary.Omitted > 0 {
 			msg += fmt.Sprintf(", %d omitted", summary.Omitted)
 		}
-		fmt.Fprintln(os.Stderr, msg)
-		return
+		return msg
 	}
 
-	msg := fmt.Sprintf("\nAll %s migration complete: %d buckets, %d/%d objects copied", kind, summary.Buckets, summary.Migrated, summary.Migratable)
+	msg := fmt.Sprintf("All %s migration complete: %d buckets, %d/%d objects copied", kind, summary.Buckets, summary.Migrated, summary.Migratable)
 	if summary.Skipped > 0 {
 		msg += fmt.Sprintf(", %d skipped", summary.Skipped)
 	}
@@ -68,12 +68,21 @@ func PrintSummary(kind string, summary Summary) {
 			msg += fmt.Sprintf(", %d dest-only", summary.DestOnly)
 		}
 	}
-	fmt.Fprintln(os.Stderr, msg)
+	return msg
+}
+
+// PrintSummary writes a final migration report to stderr (tests and legacy callers).
+func PrintSummary(kind string, summary Summary) {
+	fmt.Fprintln(os.Stderr, "\n"+SummaryMessage(kind, summary))
 }
 
 // CompleteRun prints the final summary and returns ExitError when exitCode is non-zero.
-func CompleteRun(kind string, summary Summary, exitCode int) error {
-	PrintSummary(kind, summary)
+func CompleteRun(kind string, summary Summary, exitCode int, session *progress.Session) error {
+	session.Complete(progress.Footer{
+		Headline:    SummaryMessage(kind, summary),
+		ExitCode:    exitCode,
+		Interrupted: session.Interrupted(),
+	})
 	if exitCode != 0 {
 		return &ExitError{Code: exitCode}
 	}

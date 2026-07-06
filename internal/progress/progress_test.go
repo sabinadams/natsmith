@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sabinadams/natsmith/internal/testutil"
 )
@@ -24,8 +25,11 @@ func TestTruncateMiddle(t *testing.T) {
 
 func TestBucketBarFinish(t *testing.T) {
 	out := testutil.CaptureStderr(t, func() {
+		s := NewSession(SessionConfig{Title: "test", NoProgress: true})
+		s.BeginBucket()
 		bar := &BucketBar{baseDesc: "KV schema (1/1)"}
 		bar.Finish(ItemStats{Total: 3, Migrated: 2, Skipped: 1})
+		s.BucketCopied("KV", "schema", 1, 1, ItemStats{Total: 3, Migrated: 2, Skipped: 1})
 	})
 	if !strings.Contains(out, "2/3 copied") || !strings.Contains(out, "1 skipped") {
 		t.Fatalf("output: %s", out)
@@ -62,13 +66,11 @@ func TestReportScanObjectsNoProgress(t *testing.T) {
 	}
 }
 
-func TestPrintHeaderAndFinishMessage(t *testing.T) {
+func TestPrintHeader(t *testing.T) {
 	out := testutil.CaptureStderr(t, func() {
 		PrintHeader("KV migration")
-		bar := &BucketBar{enabled: false, baseDesc: "KV schema (1/1)"}
-		bar.FinishMessage("  · done")
 	})
-	if !strings.Contains(out, "KV migration") || !strings.Contains(out, "done") {
+	if !strings.Contains(out, "KV migration") {
 		t.Fatalf("output: %s", out)
 	}
 }
@@ -107,20 +109,55 @@ func TestTransferTrackerUpgradesBar(t *testing.T) {
 	})
 }
 
+func TestFormatElapsed(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		d    time.Duration
+		want string
+	}{
+		{450 * time.Millisecond, "450ms"},
+		{34 * time.Second, "34s"},
+		{2*time.Minute + 34*time.Second, "2m 34s"},
+		{2 * time.Minute, "2m"},
+		{time.Hour + 23*time.Minute + 4*time.Second, "1h 23m 4s"},
+		{time.Hour + 23*time.Minute, "1h 23m"},
+	}
+	for _, tc := range cases {
+		if got := FormatElapsed(tc.d); got != tc.want {
+			t.Errorf("FormatElapsed(%v) = %q, want %q", tc.d, got, tc.want)
+		}
+	}
+}
+
+func TestSessionFailureRecap(t *testing.T) {
+	out := testutil.CaptureStderr(t, func() {
+		s := NewSession(SessionConfig{Title: "KV restore", NoProgress: true})
+		s.BucketFail("KV", "bad", 1, 1, "restore failed", fmt.Errorf("boom"))
+		s.Completef(1, "KV restore complete: 0/1 buckets")
+	})
+	for _, want := range []string{"failed buckets", "bad", "restore failed", "Finished with errors"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output missing %q: %s", want, out)
+		}
+	}
+}
+
 func TestSessionOutput(t *testing.T) {
 	out := testutil.CaptureStderr(t, func() {
-		s := NewSession(false, "KV restore")
+		s := NewSession(SessionConfig{Title: "KV restore", NoProgress: true})
 		s.Status("Connecting...")
 		s.BucketSuccess("KV", "schema", 1, 2, "done")
 		s.BucketFail("KV", "bad", 2, 2, "restore failed", fmt.Errorf("boom"))
-		s.Completef("KV restore complete: %d/%d buckets", 1, 2)
+		s.Completef(1, "KV restore complete: %d/%d buckets", 1, 2)
 	})
 	for _, want := range []string{
 		"KV restore",
 		"Connecting...",
 		"✓ KV schema (1/2)",
 		"✗ KV bad (2/2)",
-		"KV restore complete: 1/2 buckets",
+		"Finished with errors",
+		"completed in",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("output missing %q: %s", want, out)

@@ -3,6 +3,8 @@ package kv
 import (
 	"fmt"
 	"os"
+
+	"github.com/sabinadams/natsmith/internal/progress"
 )
 
 // VerifyResult reports how destination keys compare to source migratable keys.
@@ -27,6 +29,41 @@ func (r VerifyResult) Issues() int {
 
 const maxSampleKeys = 20
 
+// ReportVerify prints a per-bucket verification summary through the session.
+func ReportVerify(session *progress.Session, bucket string, verify VerifyResult) {
+	if verify.Expected == 0 && verify.DestOnly == 0 {
+		if progress.ShowHumanOutput() {
+			fmt.Fprintf(os.Stderr, "  %s verify %s — nothing to check\n", progress.InfoMark(), bucket)
+		}
+		return
+	}
+
+	detail := fmt.Sprintf("expected %d migratable — %d ok, %d missing, %d mismatch",
+		verify.Expected, verify.OK, verify.Missing, verify.Mismatch)
+	if verify.DestOnly > 0 {
+		detail += fmt.Sprintf(", %d dest-only", verify.DestOnly)
+	}
+
+	if progress.ShowHumanOutput() {
+		fmt.Fprintf(os.Stderr, "  %s verify %s — %s\n", progress.Dim("›"), bucket, detail)
+	}
+
+	printKeySample(os.Stderr, bucket, "missing", verify.MissingKeys)
+	printKeySample(os.Stderr, bucket, "mismatch", verify.MismatchKeys)
+	printKeySample(os.Stderr, bucket, "dest-only", verify.DestOnlyKeys)
+
+	switch {
+	case verify.Passed() && verify.DestOnly == 0:
+		if progress.ShowHumanOutput() {
+			fmt.Fprintf(os.Stderr, "  %s verify %s — destination matches source migratable keys\n", progress.SuccessMark(), bucket)
+		}
+	case verify.Passed() && verify.DestOnly > 0:
+		session.BucketWarning("verify", bucket, "migratable keys match but destination has extra keys")
+	default:
+		session.BucketWarning("verify", bucket, fmt.Sprintf("FAILED — %d issue(s)", verify.Issues()))
+	}
+}
+
 // PrintVerifyReport writes a per-bucket verification summary to stderr.
 func PrintVerifyReport(bucket string, verify VerifyResult) {
 	if verify.Expected == 0 && verify.DestOnly == 0 {
@@ -43,9 +80,9 @@ func PrintVerifyReport(bucket string, verify VerifyResult) {
 	}
 	fmt.Fprintln(os.Stderr)
 
-	printKeySample(os.Stderr, bucket, "missing", verify.MissingKeys)
-	printKeySample(os.Stderr, bucket, "mismatch", verify.MismatchKeys)
-	printKeySample(os.Stderr, bucket, "dest-only", verify.DestOnlyKeys)
+	printKeySampleLegacy(os.Stderr, bucket, "missing", verify.MissingKeys)
+	printKeySampleLegacy(os.Stderr, bucket, "mismatch", verify.MismatchKeys)
+	printKeySampleLegacy(os.Stderr, bucket, "dest-only", verify.DestOnlyKeys)
 
 	switch {
 	case verify.Passed() && verify.DestOnly == 0:
@@ -57,7 +94,7 @@ func PrintVerifyReport(bucket string, verify VerifyResult) {
 	}
 }
 
-func printKeySample(w *os.File, bucket, kind string, keys []string) {
+func printKeySampleLegacy(w *os.File, bucket, kind string, keys []string) {
 	if len(keys) == 0 {
 		return
 	}
@@ -70,6 +107,22 @@ func printKeySample(w *os.File, bucket, kind string, keys []string) {
 	}
 	if len(keys) > maxSampleKeys {
 		fmt.Fprintf(w, "    %s %s: ... and %d more\n", bucket, kind, len(keys)-maxSampleKeys)
+	}
+}
+
+func printKeySample(w *os.File, bucket, kind string, keys []string) {
+	if len(keys) == 0 || !progress.ShowHumanOutput() {
+		return
+	}
+	limit := len(keys)
+	if limit > maxSampleKeys {
+		limit = maxSampleKeys
+	}
+	for _, key := range keys[:limit] {
+		fmt.Fprintf(w, "      %s %s: %s\n", progress.Dim("·"), kind, key)
+	}
+	if len(keys) > maxSampleKeys {
+		fmt.Fprintf(w, "      %s %s: ... and %d more\n", progress.Dim("·"), kind, len(keys)-maxSampleKeys)
 	}
 }
 

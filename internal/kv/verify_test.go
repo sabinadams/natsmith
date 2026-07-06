@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sabinadams/natsmith/internal/progress"
 	"github.com/sabinadams/natsmith/internal/testutil"
 )
 
@@ -47,6 +48,16 @@ func TestWriteFailuresFile(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %q in %q", want, body)
 		}
+	}
+}
+
+func TestReportVerify(t *testing.T) {
+	out := testutil.CaptureStderr(t, func() {
+		session := progress.NewSession(progress.SessionConfig{Title: "verify", NoProgress: true})
+		ReportVerify(session, "schema", VerifyResult{Expected: 2, OK: 2})
+	})
+	if !strings.Contains(out, "destination matches source migratable keys") {
+		t.Fatalf("output: %s", out)
 	}
 }
 

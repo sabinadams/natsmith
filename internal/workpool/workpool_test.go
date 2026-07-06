@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -70,12 +71,12 @@ func TestRunParallelFirstError(t *testing.T) {
 func TestRunParallelCapsWorkersToItems(t *testing.T) {
 	t.Parallel()
 
-	calls := 0
+	var calls atomic.Int32
 	err := RunParallel(context.Background(), 100, []int{1, 2}, func(ctx context.Context, n int) error {
-		calls++
+		calls.Add(1)
 		return nil
 	})
-	if err != nil || calls != 2 {
-		t.Fatalf("calls=%d err=%v", calls, err)
+	if err != nil || calls.Load() != 2 {
+		t.Fatalf("calls=%d err=%v", calls.Load(), err)
 	}
 }

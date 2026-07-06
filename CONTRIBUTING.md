@@ -211,16 +211,22 @@ Do not add an `internal/cli/` layer. Cobra wiring and command orchestration belo
 
 Use [`internal/progress`](internal/progress/) for stderr output:
 
-1. `session := progress.NewSession(!cfg.NoProgress, "Title")`
-2. `session.Status("Connecting...")`
-3. Per bucket — **one bar at a time**:
+1. `session := progress.NewSession(progress.SessionConfig{Title: "...", NoProgress: cfg.NoProgress})`
+2. `session.PrintPlan(...)` after listing buckets
+3. `session.Status(...)` for connection phases
+4. Per bucket — `session.BeginBucket()` then **one bar at a time**:
    - `StartIndeterminate` — scan/list phases (migrate)
    - `StartBucket` — counted item copy (objects)
    - `StartTransferTracked` — byte transfer (backup/restore)
-4. `session.BucketSuccess` / `session.BucketFail` for per-bucket results
-5. `session.Completef` or `migration.CompleteRun` for the footer
+5. `session.BucketInfo` / `BucketSuccessStats` / `BucketCopied` / `BucketFail` / `BucketWarning`
+6. `session.Completef(exitCode, ...)` or `migration.CompleteRun(..., session)` for the footer
 
-Respect `--no-progress`: bars are disabled; throttled plain lines are used when stderr is not a TTY.
+Global flags on the root command:
+
+- `--quiet` — errors and final summary only
+- `--json` — structured NDJSON events on stdout
+
+Respect `NO_COLOR`, non-TTY stderr, and `--no-progress`.
 
 ## Pull requests
 

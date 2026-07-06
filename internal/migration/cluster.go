@@ -7,6 +7,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	sm "github.com/sabinadams/natsmith/internal/nats"
+	"github.com/sabinadams/natsmith/internal/progress"
 )
 
 // Clusters holds JetStream contexts for a source/destination pair.
@@ -24,6 +25,7 @@ type Clusters struct {
 // status is called with human-readable progress lines (may be nil).
 func ConnectClusters(cfg BaseConfig, status func(string)) (*Clusters, error) {
 	ctx, cancel := context.WithCancel(context.Background())
+	progress.RegisterInterruptCancel(cancel)
 
 	if status != nil {
 		status("Connecting to source...")
