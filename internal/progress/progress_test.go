@@ -89,3 +89,29 @@ func TestNewProgressDisabled(t *testing.T) {
 	bar.Add(1)
 	bar.ClearItem()
 }
+
+func TestReportTransferThrottled(t *testing.T) {
+	out := testutil.CaptureStderr(t, func() {
+		bar := &BucketBar{
+			enabled:       false,
+			baseDesc:      "KV telnyx (1/1) — restoring",
+			transferTotal: 1000,
+		}
+		bar.ReportTransfer(10)
+		bar.ReportTransfer(20)
+		bar.ReportTransfer(30)
+	})
+	if strings.Count(out, "restoring") != 1 {
+		t.Fatalf("expected one throttled line, got: %q", out)
+	}
+}
+
+func TestTransferTrackerUpgradesBar(t *testing.T) {
+	_ = testutil.CaptureStderr(t, func() {
+		p := NewProgress(false)
+		tracker := p.StartTransferTracked("KV", "schema", 1, 1, "backing up", 0)
+		tracker.Report(500, 2000)
+		tracker.Report(1000, 2000)
+		tracker.Finish()
+	})
+}

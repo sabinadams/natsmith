@@ -7,6 +7,7 @@ import (
 	"github.com/sabinadams/natsmith/internal/kv"
 	"github.com/sabinadams/natsmith/internal/migration"
 	"github.com/sabinadams/natsmith/internal/nats"
+	"github.com/sabinadams/natsmith/internal/progress"
 	"github.com/spf13/cobra"
 )
 
@@ -27,8 +28,9 @@ func init() {
 }
 
 func runKVRestore(cfg migration.EndpointConfig) error {
-	fmt.Fprintln(os.Stderr, "\nKV restore")
-	logStatus("Connecting...")
+	ui := progress.NewProgress(!cfg.NoProgress)
+	progress.PrintHeader("KV restore")
+	fmt.Fprintln(os.Stderr, "Connecting...")
 
 	nc, mgr, err := nats.ConnectJSM(cfg.URL, cfg.Creds, cfg.RequestTimeout)
 	if err != nil {
@@ -53,14 +55,35 @@ func runKVRestore(cfg migration.EndpointConfig) error {
 	for i, dir := range dirs {
 		index, total := i+1, len(dirs)
 
-		var report kv.ProgressWriter
+		dataSize, err := kv.DataFileSize(dir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "  ✗ KV restore (%d/%d) from %s — failed: %v\n", index, total, dir, err)
+			exitCode = 1
+			continue
+		}
+
+		meta, err := kv.ReadBackupMetadata(dir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "  ✗ KV restore (%d/%d) from %s — failed: %v\n", index, total, dir, err)
+			exitCode = 1
+			continue
+		}
+		bucket, _ := kv.BucketFromStreamName(meta.Config.Name)
+
+		transfer := ui.StartTransferTracked("KV", bucket, index, total, "restoring", dataSize)
+		var report kv.TransferReporter
 		if !cfg.NoProgress {
-			report = func(format string, args ...any) {
-				logStatus(fmt.Sprintf(format, args...))
+			report = func(p kv.TransferProgress) {
+				totalBytes := p.Total
+				if totalBytes <= 0 {
+					totalBytes = dataSize
+				}
+				transfer.Report(p.Sent, totalBytes)
 			}
 		}
 
 		result, err := kv.RestoreBucket(ctx, mgr, dir, shared.force, shared.replicas, !cfg.NoProgress, report)
+		transfer.Finish()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "  ✗ KV restore (%d/%d) from %s — failed: %v\n", index, total, dir, err)
 			exitCode = 1

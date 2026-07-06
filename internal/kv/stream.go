@@ -51,19 +51,42 @@ type RestoreResult struct {
 
 type ProgressWriter func(format string, args ...any)
 
+// TransferProgress reports byte transfer for backup or restore.
+type TransferProgress struct {
+	Sent  int64
+	Total int64
+}
+
+// TransferReporter receives throttled transfer updates.
+type TransferReporter func(TransferProgress)
+
+// DataFileSize returns the size of stream.tar.s2 in a backup directory.
+func DataFileSize(dir string) (int64, error) {
+	fi, err := os.Stat(filepath.Join(dir, "stream.tar.s2"))
+	if err != nil {
+		return 0, fmt.Errorf("stat stream.tar.s2: %w", err)
+	}
+	return fi.Size(), nil
+}
+
 // BackupBucket snapshots the backing stream into dir (creates backup.json + stream.tar.s2).
 func BackupBucket(
 	ctx context.Context,
 	mgr *jsm.Manager,
 	bucket, dir string,
 	showProgress bool,
-	report ProgressWriter,
+	report TransferReporter,
 ) (BackupResult, error) {
 	streamName := StreamName(bucket)
 
 	stream, err := mgr.LoadStream(streamName)
 	if err != nil {
 		return BackupResult{}, fmt.Errorf("open stream %q: %w", streamName, err)
+	}
+
+	var expectedBytes int64
+	if info, err := stream.Information(); err == nil {
+		expectedBytes = int64(info.State.Bytes)
 	}
 
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -79,7 +102,14 @@ func BackupBucket(
 			if p.Finished() {
 				return
 			}
-			report("  · backing up %s — %d / %d bytes", bucket, p.BytesReceived(), p.BytesExpected())
+			total := int64(p.BytesExpected())
+			if total <= 0 {
+				total = expectedBytes
+			}
+			report(TransferProgress{
+				Sent:  int64(p.BytesReceived()),
+				Total: total,
+			})
 		}))
 	}
 
@@ -109,7 +139,7 @@ func RestoreBucket(
 	force bool,
 	replicas int,
 	showProgress bool,
-	report ProgressWriter,
+	report TransferReporter,
 ) (RestoreResult, error) {
 	meta, err := ReadBackupMetadata(dir)
 	if err != nil {
@@ -152,8 +182,10 @@ func RestoreBucket(
 				return
 			}
 			total := int64(p.ChunksToSend() * p.ChunkSize())
-			sent := int64(p.ChunksSent() * uint32(p.ChunkSize()))
-			report("  · restoring %s — %d / %d bytes", bucket, sent, total)
+			report(TransferProgress{
+				Sent:  int64(p.BytesSent()),
+				Total: total,
+			})
 		}))
 	}
 
