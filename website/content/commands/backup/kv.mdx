@@ -4,52 +4,40 @@
 natsmith backup kv [flags]
 ```
 
-Backs up KV buckets as JetStream stream snapshots — the same format as `nats stream backup` (`backup.json` + `stream.tar.s2`). Much faster than per-key API copy for large buckets (millions of keys).
+Snapshot KV buckets to disk (`backup.json` + `stream.tar.s2`). Same format as `nats stream backup`.
 
-## Output layout
+Requires **stream admin** on the source cluster.
+
+## Output
 
 ```text
 {--dir}/
-  schema/
-    backup.json
-    stream.tar.s2
-  telnyx-phone-validation/
-    backup.json
-    stream.tar.s2
+  <bucket>/backup.json
+  <bucket>/stream.tar.s2
 ```
+
+Omit `--bucket` to backup all KV buckets on the cluster.
 
 ## Flags
 
-| Flag | Required | Description |
-|------|----------|-------------|
-| `--context` | yes | NATS CLI context (source cluster) |
-| `--dir` | yes | Output directory for snapshots |
-| `--bucket` | — | Comma-separated buckets (default: all) |
-| `--omit` | — | Comma-separated buckets to skip |
-| `--no-progress` | — | Plain log output |
-| `--timeout` | — | Per-request timeout (default `30s`) |
+Inherits all [backup](/commands/backup) flags.
 
 ## Examples
 
-### Backup one bucket
-
 ```bash
+# One bucket (permission check / pilot)
 natsmith backup kv \
   --context sandbox-legacy \
   --dir ./backups/sandbox-legacy \
   --bucket schema
-```
 
-### Backup all KV buckets
-
-```bash
+# All buckets
 natsmith backup kv \
   --context sandbox-legacy \
   --dir ./backups/sandbox-legacy
 ```
 
-## Restore
+## See also
 
-Copy the backup directory to a machine that can reach the destination cluster, then see [`restore kv`](/commands/restore/kv).
-
-**Requires stream admin permissions** on the source cluster (more than KV read). If backup fails with a permissions error, use [`migrate kv`](/commands/migrate/kv) instead.
+- [`restore kv`](/commands/restore/kv)
+- [KV migration guide](/guides/kv-migration)

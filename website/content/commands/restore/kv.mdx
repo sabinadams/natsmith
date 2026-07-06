@@ -4,52 +4,45 @@
 natsmith restore kv [flags]
 ```
 
-Restores KV buckets from JetStream stream snapshots created by [`backup kv`](/commands/backup/kv) or `nats stream backup`.
+Restore KV buckets from snapshots created by [`backup kv`](/commands/backup/kv) or `nats stream backup`.
 
-## Input layout
+## Input
 
-`--dir` can be either:
+`--dir` is either:
 
-- A **single bucket backup** directory containing `backup.json` and `stream.tar.s2`
-- A **parent directory** with one subdirectory per bucket (as written by `natsmith backup kv`)
+- A **bucket directory** containing `backup.json` and `stream.tar.s2`
+- A **parent directory** with one subdirectory per bucket (from `backup kv` without `--bucket`)
+
+Restores every matching subdirectory in one run.
 
 ## Flags
 
-| Flag | Required | Description |
-|------|----------|-------------|
-| `--context` | yes | NATS CLI context (destination cluster) |
-| `--dir` | yes | Backup directory (single bucket or parent) |
-| `--bucket` | — | Comma-separated buckets to restore (default: all found) |
-| `--omit` | — | Comma-separated buckets to skip |
-| `--force` | — | Delete existing streams before restore |
-| `--replicas` | — | Override replica count (`0` = use backup config) |
-| `--no-progress` | — | Plain log output |
-| `--timeout` | — | Per-request timeout (default `30s`) |
+Inherits all [restore](/commands/restore) flags.
 
 ## Examples
 
-### Restore one bucket
-
 ```bash
-natsmith restore kv \
-  --context sandbox-dedicated \
-  --dir ./backups/sandbox-legacy/schema
-```
-
-### Restore all buckets from a backup tree
-
-```bash
+# All buckets from a backup tree
 natsmith restore kv \
   --context sandbox-dedicated \
   --dir ./backups/sandbox-legacy \
   --force
-```
 
-Use `--force` when re-running restore on a cluster that already has the stream from a partial attempt.
+# One bucket
+natsmith restore kv \
+  --context sandbox-dedicated \
+  --dir ./backups/sandbox-legacy/schema \
+  --force
+```
 
 ## Notes
 
-- Restores the **full stream state** from backup (including revision history and tombstones), not just live keys.
-- The destination stream must **not** exist unless `--force` is set.
-- Destination KV buckets do not need to exist beforehand — restore creates the backing stream.
-- Override `--replicas` when restoring to a cluster with a different replica topology (e.g. sandbox → single-replica dev).
+- Restores **full stream state** (history, tombstones), not live keys only.
+- Use `--force` if destination already has the bucket (including after a partial `migrate kv`).
+- Creates the backing stream; destination buckets need not exist beforehand.
+- Set `--replicas` when destination topology differs from the backup.
+
+## See also
+
+- [`backup kv`](/commands/backup/kv)
+- [KV migration guide](/guides/kv-migration)

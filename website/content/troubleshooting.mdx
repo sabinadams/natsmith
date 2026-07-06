@@ -23,7 +23,7 @@
 | Problem | Likely cause |
 | ------- | ------------ |
 | `destination bucket not found` | Create the KV bucket on destination first (e.g. Terraform) |
-| Run appears slow on large buckets | Expected for API copy — use `--workers 32` and `--no-verify`; or use [`backup kv`](/commands/backup/kv) + [`restore kv`](/commands/restore/kv) for bulk stream snapshots |
+| Run appears slow on large buckets | Expected for API copy — use `--workers 32` and `--no-verify`; or see [KV migration](/guides/kv-migration) for backup/restore |
 | Migratable count ≠ `nats kv ls \| wc -l` | Investigate before migrating — counts should match |
 | Verify reports missing / mismatch | Re-run `natsmith migrate kv --verify-only --failures-file kv-failures.log …` |
 | Verify reports dest-only | Extra keys on destination not present on source |

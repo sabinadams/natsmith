@@ -15,6 +15,7 @@ Unofficial CLI for [NATS](https://nats.io) and JetStream. Not affiliated with Sy
 
 - [Install](https://sabinadams.github.io/natsmith/install/)
 - [Commands](https://sabinadams.github.io/natsmith/commands/)
+- [Guides](https://sabinadams.github.io/natsmith/guides/) — workflows and migration strategy
 - [migrate kv](https://sabinadams.github.io/natsmith/commands/migrate/kv/)
 - [migrate objects](https://sabinadams.github.io/natsmith/commands/migrate/objects/)
 - [Troubleshooting](https://sabinadams.github.io/natsmith/troubleshooting/)
@@ -57,7 +58,7 @@ See the [docs](https://sabinadams.github.io/natsmith/commands/migrate/) for comm
 | `natsmith backup kv` | Snapshot KV streams to disk (fast bulk) |
 | `natsmith restore kv` | Restore KV streams from snapshots |
 
-See [Commands](https://sabinadams.github.io/natsmith/commands/) for flags and the [migrate overview](https://sabinadams.github.io/natsmith/commands/migrate/) for production workflow.
+See [Commands](https://sabinadams.github.io/natsmith/commands/) for flags and [Guides](https://sabinadams.github.io/natsmith/guides/kv-migration/) for KV migration workflow.
 
 ## Contributing
 

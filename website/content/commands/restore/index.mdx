@@ -8,13 +8,32 @@ asIndexPage: true
 natsmith restore <subcommand> [flags]
 ```
 
-Restore JetStream stream snapshots created by [`backup`](/commands/backup) or the NATS CLI.
+Import JetStream stream snapshots from local files.
 
-See [KV: migrate vs backup/restore](/commands/migrate#kv-migrate-vs-backuprestore) for when to use this instead of [`migrate kv`](/commands/migrate/kv).
+## Subcommands
 
-| Subcommand | Description |
-|------------|-------------|
-| [`kv`](/commands/restore/kv) | Restore KV buckets from stream snapshots |
+| Command | Description |
+|---------|-------------|
+| [`kv`](/commands/restore/kv) | Restore `KV_<bucket>` streams |
+
+## Global flags
+
+Persistent on `restore`:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--context` | — | NATS CLI context (required) |
+| `--dir` | — | Backup directory (required) |
+| `--bucket` | all | Comma-separated bucket filter |
+| `--omit` | — | Comma-separated buckets to skip |
+| `--force` | `false` | Delete existing streams before restore |
+| `--replicas` | `0` | Override replica count (`0` = use backup) |
+| `--no-progress` | `false` | Plain stderr |
+| `--timeout` | `30s` | Per-request NATS timeout |
+
+See [KV migration](/guides/kv-migration) for workflow and when to use `--force`.
+
+## Example
 
 ```bash
 natsmith restore kv \

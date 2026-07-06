@@ -8,19 +8,33 @@ asIndexPage: true
 natsmith backup <subcommand> [flags]
 ```
 
-Create JetStream stream snapshots for fast bulk transfer between clusters.
+Export JetStream streams to local snapshot files.
 
-| Subcommand | Description |
-|------------|-------------|
-| [`kv`](/commands/backup/kv) | Backup KV buckets (`KV_<bucket>` streams) |
+## Subcommands
 
-Snapshots are written to local disk. Copy them to the destination environment, then use [`restore`](/commands/restore).
+| Command | Description |
+|---------|-------------|
+| [`kv`](/commands/backup/kv) | Snapshot `KV_<bucket>` streams |
 
-See [KV: migrate vs backup/restore](/commands/migrate#kv-migrate-vs-backuprestore) for when to use this instead of [`migrate kv`](/commands/migrate/kv).
+## Global flags
+
+Persistent on `backup`:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--context` | — | NATS CLI context (required) |
+| `--dir` | — | Output directory (required) |
+| `--bucket` | all | Comma-separated bucket filter |
+| `--omit` | — | Comma-separated buckets to skip |
+| `--no-progress` | `false` | Plain stderr |
+| `--timeout` | `30s` | Per-request NATS timeout |
+
+Pair with [`restore`](/commands/restore) on the destination cluster. See [KV migration](/guides/kv-migration) for when to use this vs [`migrate kv`](/commands/migrate/kv).
+
+## Example
 
 ```bash
 natsmith backup kv \
   --context sandbox-legacy \
-  --dir ./backups/sandbox-legacy \
-  --bucket telnyx-phone-validation
+  --dir ./backups/sandbox-legacy
 ```

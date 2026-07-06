@@ -1,0 +1,72 @@
+# KV migration
+
+Two ways to move KV data between clusters:
+
+| Approach | Commands |
+|----------|----------|
+| Per-key copy | `natsmith migrate kv` |
+| Stream snapshot | `natsmith backup kv` → `natsmith restore kv` |
+
+## Comparison
+
+| | `migrate kv` | `backup kv` + `restore kv` |
+|---|---|---|
+| Mechanism | `ListKeys` → `Get` → `Put` | JetStream snapshot (`backup.json` + `stream.tar.s2`) |
+| Speed | OK for small/medium buckets; **days** at tens of millions of keys | **Hours** for very large buckets |
+| Permissions | KV read (source) + KV write (dest) | **Stream admin** on source and dest |
+| Path | Direct cluster-to-cluster | Disk staging between clusters |
+| Destination | Buckets must exist | Creates/replaces backing stream (`--force`) |
+| Data copied | Live keys only | Full stream (history, tombstones) |
+| Resume | `--skip-existing` | Re-run restore with `--force` |
+| Verify | `--verify-only` | Key-count spot check or `migrate kv --verify-only` |
+
+## When to use migrate
+
+- Dry-run or `--verify-only` before/after a bulk transfer
+- Buckets up to a few hundred thousand keys
+- KV credentials only (no stream backup permission)
+- You need live keys only into existing Terraform buckets
+
+## When to use backup/restore
+
+- Millions of keys (caches, validation stores)
+- Stream admin on both clusters
+- Fastest bulk transfer; you can stage snapshot files between environments
+
+`migrate kv` has no shorter API path across two clusters — every key is read from source and written to dest. Scanning the backing `KV_*` stream for migrate was removed; it reads far more data than live keys on legacy buckets.
+
+## Production workflow
+
+```bash
+# 1. Baseline counts (optional)
+natsmith migrate kv --dry-run \
+  --source-context <source> --dest-context <dest>
+
+# 2a. Large buckets — backup source, restore dest
+natsmith backup kv --context <source> --dir ./backups
+# copy ./backups to a host that can reach dest
+natsmith restore kv --context <dest> --dir ./backups --force
+
+# 2b. Small buckets — direct copy
+natsmith migrate kv --source-context <source> --dest-context <dest> \
+  --workers 32 --no-verify
+
+# 3. Confirm
+natsmith migrate kv --verify-only \
+  --source-context <source> --dest-context <dest> --workers 32
+```
+
+### Partial migrate on destination
+
+If you already ran `migrate kv` on the destination, you do **not** need to purge buckets manually. `restore kv --force` deletes existing `KV_*` streams and replaces them from the backup.
+
+### Long runs
+
+Backup and restore all buckets are **single commands** (they loop internally). Use `tmux`, `screen`, or `nohup` only to survive disconnects — not because you need one command per bucket.
+
+## See also
+
+- [`migrate kv`](/commands/migrate/kv) — flags and examples
+- [`backup kv`](/commands/backup/kv)
+- [`restore kv`](/commands/restore/kv)
+- [Troubleshooting](/troubleshooting)

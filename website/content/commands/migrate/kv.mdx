@@ -1,140 +1,61 @@
-# kv
+# migrate kv
 
 ```bash
 natsmith migrate kv [flags]
 ```
 
-Lists live keys from each source KV bucket, then copies or verifies them in parallel using `--workers`.
+Copy or verify live KV keys from source to destination using the KV API.
 
-| Classification | Meaning |
-|----------------|---------|
-| **migratable** | Live key on source — copied to destination |
-
-Deleted keys are not listed by the KV API and are not migrated.
-
-**Success looks like:** `N/N migratable copied` and `verify: N ok, 0 missing, 0 mismatch, 0 dest-only`.
-
-For a production run, see the [migrate overview](/commands/migrate) — especially [KV: migrate vs backup/restore](/commands/migrate#kv-migrate-vs-backuprestore).
-
-## Migrate vs backup/restore
-
-**Migrate** (`ListKeys` → `Get` → `Put`) is the portable per-key path: direct cluster-to-cluster, KV credentials only, live keys only. Use it for pilots, verification, and buckets up to a few hundred thousand keys.
-
-**Backup + restore** is faster for millions of keys but needs stream admin and local snapshot files. See [`backup kv`](/commands/backup/kv).
-
-Per-key migrate cannot avoid reading each value from source and writing it to dest — there is no shorter API path across two clusters. Stream-scanning the backing stream does not help; it reads far more messages than live keys on legacy buckets.
-
-## How migration works
-
-```text
-ListKeys (source)  →  parallel Get (source)  →  parallel Put (dest)
-                              ↓
-                     inline verify (optional)
-```
-
-1. **List** — enumerate live keys via the KV API (`ListKeys`)
-2. **Read + copy** — workers fetch each key from source and write to destination in parallel
-3. **Verify** — when enabled (default), each key is checked byte-for-byte on the destination
-
-Dry-run only lists and counts keys — no reads or writes. **`--workers` applies to copy, verify, and verify-only runs.**
-
-### Scale
-
-| Concern | Behavior |
-|---------|----------|
-| Large buckets (millions of keys) | Keys are processed in batches; key names are not all held in memory |
-| Memory | Bounded per batch — suitable for tens of millions of keys |
-| Resume | Use `--skip-existing` to continue an interrupted run |
-| Very large buckets (> 1M keys) | Inline verify still runs; destination-only extra-key scan is skipped |
-
-Use `--bucket` or `--omit` to scope long runs.
-
-### Ghost keys
-
-On some legacy buckets, `ListKeys` may return keys that `Get` cannot resolve (stale index entries). These **ghost keys are skipped** with a count in the summary — the bucket run continues and real keys are still copied.
+**Pipeline:** `ListKeys` → parallel `Get` → parallel `Put` → optional inline verify.
 
 ## Flags
 
-### Connection
-
-Persistent flags on `migrate`:
-
-| Flag | Example | Description |
-|------|---------|-------------|
-| `--source-context` | `sandbox-legacy` | Source NATS CLI context |
-| `--dest-context` | `sandbox` | Destination NATS CLI context |
-
-Contexts live in `~/.config/nats/context/` (same as `nats context`). Each file supplies the server URL and creds for that cluster.
-
-### Shared
+Inherits all [migrate](/commands/migrate) flags, plus:
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--bucket` | all | Comma-separated buckets to migrate |
-| `--omit` | — | Comma-separated buckets to skip |
-| `--dry-run` | `false` | List and count keys without reading values or writing |
-| `--skip-existing` | `false` | Skip records that already exist on destination |
-| `--workers` | `1` | Concurrent workers for copy/verify (1–64) |
-| `--timeout` | `30s` | Per-request NATS timeout |
-| `--no-progress` | `false` | Plain log output (useful in CI) |
+| `--verify` | `true` | Byte-for-byte check after copy |
+| `--verify-only` | `false` | Compare without writing |
+| `--failures-file` | — | Append verify issues to a log file |
 
-Use `--bucket` to select buckets, `--omit` to exclude them, or both (`--bucket` first, then `--omit` removes from that set).
+## Output
 
-### KV-specific
+| Term | Meaning |
+|------|---------|
+| migratable | Live keys listed on source |
+| ghost skipped | Keys in `ListKeys` but missing on `Get` (skipped, run continues) |
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--verify` | `true` | Verify destination after migration |
-| `--verify-only` | `false` | Compare source and dest without writing |
-| `--failures-file` | — | Append verification issues to a log file |
+Success: `N/N migratable copied` and `verify: N ok, 0 missing, 0 mismatch, 0 dest-only`.
 
 ## Examples
 
-### Dry-run all buckets
-
 ```bash
+# Count keys (no I/O)
 natsmith migrate kv --dry-run \
-  --source-context sandbox-legacy \
-  --dest-context sandbox
-```
+  --source-context sandbox-legacy --dest-context sandbox-dedicated
 
-### Migrate all buckets
-
-```bash
+# Copy all buckets
 natsmith migrate kv \
-  --source-context sandbox-legacy \
-  --dest-context sandbox \
-  --workers 32 \
-  --failures-file kv-failures.log
+  --source-context sandbox-legacy --dest-context sandbox-dedicated \
+  --workers 32 --failures-file kv-failures.log
+
+# One bucket
+natsmith migrate kv ... --bucket schema --workers 32
+
+# Compare only
+natsmith migrate kv --verify-only ... --bucket schema --workers 16
+
+# Resume interrupted run
+natsmith migrate kv ... --skip-existing --workers 32
 ```
 
-### Migrate one bucket
+## Notes
 
-```bash
-natsmith migrate kv \
-  --source-context sandbox-legacy \
-  --dest-context sandbox \
-  --bucket my-bucket \
-  --workers 32 \
-  --failures-file kv-failures.log
-```
+- Keys processed in batches — memory stays bounded for very large buckets.
+- Destination-only scan skipped when bucket has &gt; 1M keys (inline verify still runs).
+- For millions of keys, prefer [backup/restore](/guides/kv-migration).
 
-### Verify only
+## See also
 
-```bash
-natsmith migrate kv --verify-only \
-  --source-context sandbox-legacy \
-  --dest-context sandbox \
-  --bucket my-bucket \
-  --workers 16
-```
-
-### Resume an interrupted run
-
-```bash
-natsmith migrate kv \
-  --source-context sandbox-legacy \
-  --dest-context sandbox \
-  --skip-existing \
-  --workers 32
-```
+- [KV migration guide](/guides/kv-migration)
+- [Troubleshooting](/troubleshooting#migrate-kv)

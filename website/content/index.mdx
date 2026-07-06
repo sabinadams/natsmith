@@ -8,7 +8,8 @@ Unofficial; not affiliated with Synadia. Not a replacement for the official [`na
 
 1. [Install](/install) natsmith
 2. Run `natsmith -h` to see top-level commands
-3. Open the [Commands](/commands) reference for flags and examples
+3. Open [Commands](/commands) for flags and examples
+4. See [Guides](/guides) for migration workflows
 
 ```bash
 natsmith -h
@@ -19,6 +20,6 @@ natsmith migrate -h
 
 | Group | Description |
 |-------|-------------|
-| [`migrate`](/commands/migrate) | Copy JetStream KV buckets and object stores between clusters |
-
-New command groups will appear here as natsmith grows.
+| [`migrate`](/commands/migrate) | Copy KV buckets and object stores between clusters |
+| [`backup`](/commands/backup) | Export JetStream streams to local snapshots |
+| [`restore`](/commands/restore) | Import streams from local snapshots |

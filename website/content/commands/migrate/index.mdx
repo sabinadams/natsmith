@@ -8,85 +8,43 @@ asIndexPage: true
 natsmith migrate <subcommand> [flags]
 ```
 
-Copy JetStream **KV buckets** and **object stores** from a source cluster to a destination cluster.
+Copy JetStream KV buckets and object stores from a source cluster to a destination.
 
-| Subcommand | Description |
-|------------|-------------|
-| [`kv`](/commands/migrate/kv) | Copy KV buckets and verify byte-for-byte |
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`kv`](/commands/migrate/kv) | Copy KV buckets (`ListKeys` → `Get` → `Put`) |
 | [`objects`](/commands/migrate/objects) | Copy object store buckets |
 
-Connection flags are persistent on `migrate` — pass them after the subcommand:
+## Global flags
+
+Persistent on `migrate` (apply to all subcommands):
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--source-context` | — | Source [NATS CLI context](https://docs.nats.io/using-nats/nats-tools/nats_cli/context) (required) |
+| `--dest-context` | — | Destination context (required) |
+| `--bucket` | all | Comma-separated bucket filter |
+| `--omit` | — | Comma-separated buckets to skip |
+| `--dry-run` | `false` | List/count only; no reads or writes |
+| `--skip-existing` | `false` | Skip keys/objects already on destination |
+| `--workers` | `1` | Parallel workers, 1–64 |
+| `--timeout` | `30s` | Per-request NATS timeout |
+| `--no-progress` | `false` | Plain stderr (no progress UI) |
+
+## Behavior
+
+- **Source:** read-only; never deletes data.
+- **Destination:** writes matching records; does not remove extra keys/objects.
+- **Buckets:** must already exist on destination (e.g. Terraform).
+
+For KV strategy (migrate vs backup/restore), see [KV migration](/guides/kv-migration).
+
+## Example
 
 ```bash
 natsmith migrate kv --dry-run \
   --source-context sandbox-legacy \
-  --dest-context sandbox
+  --dest-context sandbox-dedicated
 ```
-
-Contexts are [NATS CLI contexts](https://docs.nats.io/using-nats/nats-tools/nats_cli/context) in `~/.config/nats/context/` — each supplies the server URL and creds for that cluster.
-
-## At a glance
-
-| | |
-|---|---|
-| **Source** | Read-only — never deletes source data (KV: `ListKeys`; objects: meta stream scan) |
-| **Destination** | Copies matching records; does **not** remove extra keys or objects on dest |
-| **Buckets** | Must already exist on destination (e.g. Terraform) |
-| **Credentials** | From each NATS CLI context (source: read · destination: write) |
-
-## How it works
-
-```text
-  source cluster                         destination cluster
- ┌─────────────────┐                   ┌─────────────────┐
- │  KV / OBJ data  │  ── natsmith ──▶  │  existing       │
- │  (read-only)    │     copy +        │  buckets        │
- └─────────────────┘     verify          └─────────────────┘
-```
-
-1. Connect to source and destination
-2. List buckets (optionally filter with `-bucket` / `-omit`)
-3. List live keys (KV) or scan meta stream (objects), then copy in parallel (see [`migrate kv`](/commands/migrate/kv#how-migration-works))
-4. Copy to destination (unless `-dry-run` or `-verify-only`)
-5. Print per-bucket summary and final totals
-
-Ensure destination buckets exist before step 3. See [`migrate kv`](/commands/migrate/kv) and [`migrate objects`](/commands/migrate/objects) for flags and examples.
-
-## KV: migrate vs backup/restore
-
-For KV buckets you can choose between two approaches:
-
-| | [`migrate kv`](/commands/migrate/kv) | [`backup kv`](/commands/backup/kv) + [`restore kv`](/commands/restore/kv) |
-|---|---|---|
-| **How** | Per-key API copy (`ListKeys` → `Get` → `Put`) | JetStream stream snapshot (`backup.json` + `stream.tar.s2`) |
-| **Speed** | Fine for small/medium buckets; **days** for tens of millions of keys | **Hours** for very large buckets |
-| **Permissions** | KV read (source) + KV write (dest) | **Stream admin** on source and dest |
-| **Transfer** | Direct cluster-to-cluster | Backup to disk → copy files → restore |
-| **Destination** | Buckets must already exist | Creates/replaces backing stream (`--force`) |
-| **What is copied** | Live keys only | Full stream state (history, tombstones) |
-| **Resume** | `--skip-existing` | Re-run restore with `--force` |
-| **Verify** | `--verify-only` without writing | Compare key counts or spot-check with `migrate kv --verify-only` |
-
-**Use migrate kv when:**
-
-- Piloting a bucket or running `--verify-only`
-- Buckets have up to a few hundred thousand keys
-- You only have KV API credentials (no stream backup permission)
-- Destination buckets already exist via Terraform and you want live keys only
-
-**Use backup + restore when:**
-
-- A bucket has **millions of keys** (e.g. phone-validation caches)
-- You have stream admin on both clusters
-- You want the fastest bulk transfer and can stage snapshot files between environments
-
-**Why not stream scan for migrate?** Scanning the `KV_<bucket>` backing stream reads every stream message (including history and tombstones), not just live keys. On legacy buckets that is often **orders of magnitude more data** than `ListKeys` — it does not shorten large migrations and was removed in favor of `ListKeys` for migrate and stream snapshots for bulk transfer.
-
-### Recommended KV workflow (production)
-
-| Step | Command |
-|------|---------|
-| 1 | `natsmith migrate kv --dry-run …` — inspect all bucket key counts |
-| 2 | Large buckets | `natsmith backup kv --context <source> --dir ./backups …` then copy files and `natsmith restore kv --context <dest> --dir ./backups --force` |
-| 3 | Small buckets | `natsmith migrate kv --workers 32 --no-verify …` (then `--verify-only` if needed) |
-| 4 | `natsmith migrate objects …` — object stores (migrate only today) |

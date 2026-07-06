@@ -4,12 +4,16 @@ asIndexPage: true
 
 # Commands
 
-Top-level command groups exposed by `natsmith`.
+```bash
+natsmith <command> [flags]
+```
 
-| Group | Usage | Description |
-|-------|-------|-------------|
-| [`migrate`](/commands/migrate) | `natsmith migrate …` | Copy JetStream data between NATS clusters (per-key API) |
-| [`backup`](/commands/backup) | `natsmith backup …` | Snapshot streams to local files (fast bulk export) |
-| [`restore`](/commands/restore) | `natsmith restore …` | Restore streams from local snapshot files |
+| Command | Usage |
+|---------|-------|
+| [`migrate`](/commands/migrate) | `natsmith migrate kv\|objects …` — per-key copy between clusters |
+| [`backup`](/commands/backup) | `natsmith backup kv …` — export streams to disk |
+| [`restore`](/commands/restore) | `natsmith restore kv …` — import streams from disk |
 
-Each group page documents shared flags, subcommands, and examples.
+Each group page lists shared flags. Subcommand pages (`kv`, `objects`) list command-specific flags and examples.
+
+For workflow guidance, see [Guides](/guides).
