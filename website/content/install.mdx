@@ -4,6 +4,19 @@ natsmith is a **global CLI** — install once and run from any directory. It is 
 
 Pre-built binaries are available for macOS, Linux, and Windows. **Go is not required** unless you use [`go install`](#with-go) or [`go run`](#run-without-installing) below.
 
+<ReleaseCallout />
+
+## How versions work
+
+| Install method | Which version you get |
+| -------------- | --------------------- |
+| [Install script](#install-script-macos--linux) | Always the latest [GitHub release](https://github.com/sabinadams/natsmith/releases/latest) (resolved when you run the script) |
+| [Homebrew](#homebrew-macos--linux) | Latest formula version after `brew update` |
+| `go install …@latest` | Latest tagged release via the Go module proxy |
+| Pinned examples below | The **current release** shown above — updated when this site is rebuilt after a new release |
+
+You do not need to hunt for version numbers for most installs. Use the install script, Homebrew, or `@latest`. Pin a specific tag only if you need a fixed version.
+
 ## Install script (macOS & Linux)
 
 Downloads the latest release binary from GitHub:
@@ -32,19 +45,11 @@ The formula is updated automatically on each release.
 
 Download a platform archive from [GitHub Releases](https://github.com/sabinadams/natsmith/releases). Each archive contains the `natsmith` binary. Verify downloads with `checksums.txt`.
 
-**macOS (arm64) example** — resolves the latest release tag from GitHub:
+**macOS (arm64) example** for the current release (<CurrentRelease />):
 
-```bash
-VERSION=$(curl -fsSL -H "Accept: application/vnd.github+json" \
-  https://api.github.com/repos/sabinadams/natsmith/releases/latest \
-  | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\([^"]*\)".*/\1/p')
-curl -LO "https://github.com/sabinadams/natsmith/releases/download/v${VERSION}/natsmith_${VERSION}_darwin_arm64.tar.gz"
-tar xzf "natsmith_${VERSION}_darwin_arm64.tar.gz"
-chmod +x natsmith
-sudo mv natsmith /usr/local/bin/
-```
+<DarwinArm64Download />
 
-Or pick any tag from [GitHub Releases](https://github.com/sabinadams/natsmith/releases) and substitute `VERSION` manually.
+Older releases are on [GitHub Releases](https://github.com/sabinadams/natsmith/releases) — substitute `VERSION` in the commands above.
 
 Windows releases are `.zip` archives — put `natsmith.exe` on your `PATH`.
 
@@ -61,13 +66,11 @@ go install github.com/sabinadams/natsmith/cmd/natsmith@latest
 natsmith migrate kv -h
 ```
 
-Pin a specific release (optional):
+Pin the current release (optional):
 
-```bash
-go install github.com/sabinadams/natsmith/cmd/natsmith@vX.Y.Z
-```
+<GoInstallPin />
 
-Use a tag from [GitHub Releases](https://github.com/sabinadams/natsmith/releases).
+Other tags are on [GitHub Releases](https://github.com/sabinadams/natsmith/releases).
 
 ## Run without installing
 

@@ -30,3 +30,4 @@ coverage/
 website/node_modules/
 website/.next/
 website/out/
+website/lib/version.generated.js

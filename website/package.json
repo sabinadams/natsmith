@@ -2,7 +2,9 @@
   "name": "natsmith-docs",
   "private": true,
   "scripts": {
+    "predev": "sh ../scripts/fetch-release-version.sh",
     "dev": "next dev",
+    "prebuild": "sh ../scripts/fetch-release-version.sh",
     "build": "next build --webpack",
     "start": "next start",
     "postinstall": "patch-package"

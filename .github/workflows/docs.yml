@@ -3,6 +3,8 @@ name: Deploy docs
 on:
   push:
     branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:

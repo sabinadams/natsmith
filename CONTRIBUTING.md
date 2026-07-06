@@ -15,16 +15,24 @@ make install   # installs natsmith to $(go env GOPATH)/bin
 Docs site ([Nextra 4](https://nextra.site/) + Next.js 16):
 
 ```bash
-cd website && npm install && npm run dev   # http://localhost:3000
+make docs-dev    # fetch latest release version + http://localhost:3000
+```
+
+Or:
+
+```bash
+cd website && npm install && npm run dev
 ```
 
 `npm install` runs `patch-package` to apply a one-line fix for a Layout validation bug in `nextra-theme-docs@4.6.1` (fixed upstream, not yet in npm).
 
-Or build static export locally (same as GitHub Pages):
+Build static export locally (same as GitHub Pages):
 
 ```bash
-cd website && NEXT_PUBLIC_BASE_PATH=/natsmith npm run build
+make docs-build
 ```
+
+Or `cd website && NEXT_PUBLIC_BASE_PATH=/natsmith npm run build` (runs `scripts/fetch-release-version.sh` automatically via `prebuild`).
 
 Or build into `./bin` without installing globally:
 
@@ -151,6 +159,9 @@ Only paths under `cmd/` mirror CLI commands (`natsmith migrate kv`, etc.). Packa
 | `.goreleaser.yaml` | Release build configuration |
 | `.github/workflows/ci.yml` | PR and push checks |
 | `.github/workflows/release.yml` | Tag-triggered release builds |
+| `.github/workflows/docs.yml` | Docs site build and GitHub Pages deploy |
+| `scripts/fetch-release-version.sh` | Resolves latest published release for docs builds |
+| `scripts/install.sh` | End-user install script (also published at `website/public/install.sh`) |
 
 ## Running tests locally
 
@@ -178,7 +189,15 @@ go test -tags=integration -count=1 -timeout=10m ./internal/integration/ ./cmd/mi
 
 CI runs integration tests in a dedicated step after unit tests.
 
-User-facing documentation is built with [Nextra](https://nextra.site/) in `website/` and published to [GitHub Pages](https://sabinadams.github.io/natsmith/) on every push to `main`. Enable **Settings → Pages → Build and deployment → GitHub Actions** if the site is not live yet.
+User-facing documentation is built with [Nextra](https://nextra.site/) in `website/` and published to [GitHub Pages](https://sabinadams.github.io/natsmith/) by the [Deploy docs](.github/workflows/docs.yml) workflow. Enable **Settings → Pages → Build and deployment → GitHub Actions** if the site is not live yet.
+
+The workflow runs on every push to `main`, when a [GitHub release is published](#releasing), and on manual **workflow_dispatch**.
+
+### Docs version resolution
+
+Pinned install examples (e.g. `go install …@v1.2.3`) are **not** edited by hand. Before each docs build, [`scripts/fetch-release-version.sh`](scripts/fetch-release-version.sh) calls the GitHub API (`releases/latest`) and writes `website/lib/version.generated.js` (gitignored). MDX components on the [Install](https://sabinadams.github.io/natsmith/install/) page read that file.
+
+Use `make docs-dev` / `make docs-build` from the repo root, or let `npm run dev` / `npm run build` run the script via `predev` / `prebuild`.
 
 ## Adding a command
 
@@ -245,16 +264,38 @@ CI runs three jobs on every push and pull request to `main`:
 
 ## Releasing
 
-Publishing a semver tag triggers the [Release workflow](.github/workflows/release.yml). GoReleaser builds binaries, attaches them to the GitHub release, and updates the [Homebrew formula](https://github.com/sabinadams/homebrew-natsmith). **No doc version bumps are required** — user-facing install docs use `@latest` or resolve the latest tag from GitHub.
+Publishing a semver tag is the **only** release step. You do not edit version strings in the repo, bump doc pins, or update the install script.
 
-### Checklist
+### What you do
 
 1. Merge changes to `main` and confirm [CI](.github/workflows/ci.yml) is green.
-2. Choose the next [semver](https://semver.org/) tag (`vMAJOR.MINOR.PATCH`). Tags must start with `v`.
-3. Publish the release (preferred: **GitHub UI** — steps below).
-4. Watch the **Release** workflow on the [Actions](https://github.com/sabinadams/natsmith/actions) tab (~3 minutes).
-5. Verify the [GitHub release](https://github.com/sabinadams/natsmith/releases) has archives + `checksums.txt`, and the Homebrew tap shows the new version.
-6. Upgrade locally: `brew update && brew upgrade natsmith`.
+2. Open **Releases** → **Draft a new release** on GitHub.
+3. **Choose a tag** → type a new [semver](https://semver.org/) tag (e.g. `v1.2.3`) targeting `main`. Tags must start with `v`.
+4. Set the title (usually the tag), write release notes, and click **Publish release**.
+
+That is the full maintainer workflow. Optional: upgrade locally with `brew update && brew upgrade natsmith`.
+
+### What happens automatically
+
+| Piece | When it updates | How |
+|-------|-----------------|-----|
+| Git tag | You publish the release | Created in GitHub UI (or `git push origin v1.2.3`) |
+| Release binaries + `checksums.txt` | Tag push | [Release workflow](.github/workflows/release.yml) → [GoReleaser](.goreleaser.yaml) |
+| [Homebrew formula](https://github.com/sabinadams/homebrew-natsmith) | Tag push | GoReleaser `brews` block |
+| [Install script](website/public/install.sh) | Every user run | Fetches `releases/latest` from GitHub at runtime — no repo change |
+| `go install …@latest` | After tag is available | Go module proxy |
+| Docs pinned examples | Release published or push to `main` | [Deploy docs](.github/workflows/docs.yml) → `fetch-release-version.sh` at build time |
+
+After you publish a release, watch the **Release** workflow on [Actions](https://github.com/sabinadams/natsmith/actions) (~3 minutes). Verify the [GitHub release](https://github.com/sabinadams/natsmith/releases) has archives and the Homebrew tap shows the new version.
+
+### What you do **not** need to do
+
+- Edit `install.mdx`, README, or other docs to bump a version
+- Maintain a `VERSION` file
+- Copy binaries by hand
+- Update the Homebrew formula manually (GoReleaser opens/updates `homebrew-natsmith`)
+
+Code-only changes on `main` redeploy docs but still show the latest **published** release until you cut a new one.
 
 ### GitHub UI (preferred)
 
@@ -263,7 +304,7 @@ Publishing a semver tag triggers the [Release workflow](.github/workflows/releas
 3. Set the title (usually the tag) and write release notes.
 4. Click **Publish release**.
 
-Publishing creates the tag and triggers GoReleaser. Write release notes in the UI — the workflow adds binaries afterward.
+Publishing creates the tag and triggers GoReleaser. Write release notes in the UI — the workflow attaches binaries afterward.
 
 ### Alternative: push a tag locally
 
@@ -274,7 +315,7 @@ git tag -a v1.2.3 -m "v1.2.3"
 git push origin v1.2.3
 ```
 
-GoReleaser creates the GitHub release when the tag lands.
+GoReleaser creates or updates the GitHub release when the tag lands.
 
 ### What GoReleaser does
 
@@ -303,11 +344,14 @@ go run github.com/goreleaser/goreleaser/v2@v2.8.1 build --snapshot --clean   # o
 
 ### How users install
 
-Documented on the [Install](https://sabinadams.github.io/natsmith/install/) page. The [install script](website/public/install.sh) (also in `scripts/install.sh`) resolves the latest GitHub release automatically.
+Documented on the [Install](https://sabinadams.github.io/natsmith/install/) page.
 
-| Method | Command |
-|--------|---------|
-| Install script | `curl -fsSL https://sabinadams.github.io/natsmith/install.sh \| sh` |
-| Homebrew | `brew install sabinadams/natsmith/natsmith` |
-| GitHub Releases | [github.com/sabinadams/natsmith/releases](https://github.com/sabinadams/natsmith/releases) |
-| Go | `go install github.com/sabinadams/natsmith/cmd/natsmith@latest` |
+| Method | Command | Version source |
+|--------|---------|----------------|
+| Install script | `curl -fsSL https://sabinadams.github.io/natsmith/install.sh \| sh` | GitHub API at runtime |
+| Homebrew | `brew install sabinadams/natsmith/natsmith` | Formula updated by GoReleaser |
+| GitHub Releases | [github.com/sabinadams/natsmith/releases](https://github.com/sabinadams/natsmith/releases) | Tag you published |
+| Go | `go install github.com/sabinadams/natsmith/cmd/natsmith@latest` | Go module proxy |
+| Docs pin examples | See [Install](https://sabinadams.github.io/natsmith/install/) | `releases/latest` at docs build time |
+
+The install script in [`scripts/install.sh`](scripts/install.sh) is copied to [`website/public/install.sh`](website/public/install.sh) for GitHub Pages hosting. Keep both in sync when changing the script.

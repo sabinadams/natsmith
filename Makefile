@@ -17,9 +17,11 @@ test-integration: ## Run cross-cluster integration tests (requires Docker)
 	$(GO) test -tags=integration -count=1 -timeout=10m ./internal/integration/ ./cmd/migrate/
 
 docs-dev: ## Run Nextra docs locally
+	sh scripts/fetch-release-version.sh
 	cd website && npm run dev
 
 docs-build: ## Build static docs (GitHub Pages output in website/out)
+	sh scripts/fetch-release-version.sh
 	cd website && NEXT_PUBLIC_BASE_PATH=/natsmith npm run build
 
 clean: ## Remove built binaries and test artifacts

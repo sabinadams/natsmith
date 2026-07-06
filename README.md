@@ -62,7 +62,7 @@ See [Commands](https://sabinadams.github.io/natsmith/commands/) for flags and [G
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development and [releasing](CONTRIBUTING.md#releasing). Documentation source lives in [`website/`](website/).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and [releasing](CONTRIBUTING.md#releasing). Publishing a GitHub release is the only release step — binaries, Homebrew, and docs version examples update automatically. Documentation source lives in [`website/`](website/).
 
 ## License
 
