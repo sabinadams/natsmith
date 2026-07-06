@@ -1,34 +1,39 @@
-import { Pre, Code } from 'nextra/components'
+import { Callout } from 'nextra/components'
 import { version, tag } from '../lib/version'
+import { BashBlock } from './bash-block'
 
 export function CurrentRelease() {
-  return <code>{tag}</code>
+  return (
+    <code className="nextra-code" dir="ltr">
+      {tag}
+    </code>
+  )
 }
 
 export function ReleaseCallout() {
   return (
-    <p>
+    <Callout type="info" className="x:not-first:mt-[1.25em]">
       <strong>Current release:</strong> <CurrentRelease />
-    </p>
+    </Callout>
   )
 }
 
-export function GoInstallPin() {
+export async function GoInstallPin() {
   return (
-    <Pre data-language="bash" data-copy="">
-      <Code>{`go install github.com/sabinadams/natsmith/cmd/natsmith@${tag}`}</Code>
-    </Pre>
+    <BashBlock
+      code={`go install github.com/sabinadams/natsmith/cmd/natsmith@${tag}`}
+    />
   )
 }
 
-export function DarwinArm64Download() {
+export async function DarwinArm64Download() {
   return (
-    <Pre data-language="bash" data-copy="">
-      <Code>{`VERSION=${version}
+    <BashBlock
+      code={`VERSION=${version}
 curl -LO "https://github.com/sabinadams/natsmith/releases/download/v\${VERSION}/natsmith_\${VERSION}_darwin_arm64.tar.gz"
 tar xzf "natsmith_\${VERSION}_darwin_arm64.tar.gz"
 chmod +x natsmith
-sudo mv natsmith /usr/local/bin/`}</Code>
-    </Pre>
+sudo mv natsmith /usr/local/bin/`}
+    />
   )
 }
