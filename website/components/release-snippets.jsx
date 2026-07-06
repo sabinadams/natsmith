@@ -1,4 +1,4 @@
-import { Callout } from 'nextra/components'
+import { GitHubNoteIcon } from 'nextra/icons'
 import { version, tag } from '../lib/version'
 import { BashBlock } from './bash-block'
 
@@ -12,9 +12,12 @@ export function CurrentRelease() {
 
 export function ReleaseCallout() {
   return (
-    <Callout type="info" className="x:not-first:mt-[1.25em]">
-      <strong>Current release:</strong> <CurrentRelease />
-    </Callout>
+    <div className="nextra-callout x:not-first:mt-[1.25em] x:flex x:items-center x:gap-3 x:rounded-lg x:border x:px-4 x:py-3 x:bg-blue-100 x:dark:bg-blue-900/30 x:text-blue-700 x:dark:text-blue-400 x:border-blue-700 x:dark:border-blue-600">
+      <GitHubNoteIcon height="1em" className="x:shrink-0" />
+      <p className="x:m-0 x:leading-normal">
+        <strong>Current release:</strong> <CurrentRelease />
+      </p>
+    </div>
   )
 }
 
