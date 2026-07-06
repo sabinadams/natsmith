@@ -81,3 +81,92 @@ func TestFilterBackupDirs(t *testing.T) {
 		t.Fatalf("filtered=%v err=%v", filtered, err)
 	}
 }
+
+func TestFilterBackupDirsNoMatch(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	dir := filepath.Join(root, "schema")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "backup.json"), []byte(`{"config":{"name":"KV_schema"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	all, err := DiscoverBackupDirs(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = FilterBackupDirs(all, func(string) bool { return false })
+	if err == nil {
+		t.Fatal("expected error when no backups match filter")
+	}
+}
+
+func TestDataFileSize(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	want := []byte("snapshot-data")
+	if err := os.WriteFile(filepath.Join(dir, "stream.tar.s2"), want, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	size, err := DataFileSize(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if size != int64(len(want)) {
+		t.Fatalf("size = %d, want %d", size, len(want))
+	}
+}
+
+func TestDataFileSizeMissing(t *testing.T) {
+	t.Parallel()
+
+	if _, err := DataFileSize(t.TempDir()); err == nil {
+		t.Fatal("expected error for missing stream.tar.s2")
+	}
+}
+
+func TestReadBackupMetadata(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "backup.json"), []byte(`{"config":{"name":"KV_schema"},"state":{"messages":3}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	meta, err := ReadBackupMetadata(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if meta.Config.Name != "KV_schema" || meta.State.Msgs != 3 {
+		t.Fatalf("meta: %+v", meta)
+	}
+}
+
+func TestReadBackupMetadataInvalid(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "backup.json"), []byte(`{}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := ReadBackupMetadata(dir); err == nil {
+		t.Fatal("expected error for missing stream name")
+	}
+}
+
+func TestBackupDirForBucket(t *testing.T) {
+	t.Parallel()
+
+	got := BackupDirForBucket("/backups", "schema")
+	want := filepath.Join("/backups", "schema")
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}

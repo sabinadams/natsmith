@@ -28,10 +28,9 @@ func init() {
 
 func runObjects(cfg migration.ObjectConfig) error {
 	session := progress.NewSession(!cfg.NoProgress, "Object store migration")
-	session.Status("Connecting...")
 	copyTimeout := objects.CopyTimeout(cfg.RequestTimeout)
 
-	clusters, err := connectClusters(cfg.BaseConfig)
+	clusters, err := migration.ConnectClusters(cfg.BaseConfig, session.Status)
 	if err != nil {
 		return err
 	}

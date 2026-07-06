@@ -325,20 +325,6 @@ func (b *BucketBar) ReportScan(p ScanProgress) {
 	}
 }
 
-// ReportVerify updates progress while checking keys on the destination.
-func (b *BucketBar) ReportVerify(checked, total int) {
-	desc := fmt.Sprintf("%s — %d/%d keys checked", b.baseDesc, checked, total)
-	if b.enabled && b.bar != nil {
-		b.mu.Lock()
-		b.bar.Describe(desc)
-		b.mu.Unlock()
-		return
-	}
-	if checked == 0 || checked%100 == 0 || checked >= total {
-		fmt.Fprintf(os.Stderr, "  %s\n", desc)
-	}
-}
-
 func (b *BucketBar) Finish(stats ItemStats) {
 	if b.bar != nil {
 		_, _ = io.WriteString(os.Stderr, "\n")

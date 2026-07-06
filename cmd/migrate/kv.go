@@ -48,9 +48,8 @@ func runKV(cfg migration.KVConfig) error {
 		title = "KV verification"
 	}
 	session := progress.NewSession(!cfg.NoProgress, title)
-	session.Status("Connecting...")
 
-	clusters, err := connectClusters(cfg.BaseConfig)
+	clusters, err := migration.ConnectClusters(cfg.BaseConfig, session.Status)
 	if err != nil {
 		return err
 	}

@@ -49,8 +49,6 @@ type RestoreResult struct {
 	Bytes    uint64
 }
 
-type ProgressWriter func(format string, args ...any)
-
 // TransferProgress reports byte transfer for backup or restore.
 type TransferProgress struct {
 	Sent  int64

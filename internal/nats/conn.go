@@ -11,12 +11,10 @@ import (
 // DefaultRequestTimeout is the default per-request JetStream API timeout.
 const DefaultRequestTimeout = 30 * time.Second
 
-// Connect opens a NATS connection and JetStream context.
-func Connect(url, creds string, requestTimeout time.Duration) (*nats.Conn, jetstream.JetStream, error) {
+func clientOptions(creds string, requestTimeout time.Duration) []nats.Option {
 	if requestTimeout <= 0 {
 		requestTimeout = DefaultRequestTimeout
 	}
-
 	opts := []nats.Option{
 		nats.Name("natsmith"),
 		nats.MaxReconnects(-1),
@@ -25,8 +23,16 @@ func Connect(url, creds string, requestTimeout time.Duration) (*nats.Conn, jetst
 	if creds != "" {
 		opts = append(opts, nats.UserCredentials(creds))
 	}
+	return opts
+}
 
-	nc, err := nats.Connect(url, opts...)
+// Connect opens a NATS connection and JetStream context.
+func Connect(url, creds string, requestTimeout time.Duration) (*nats.Conn, jetstream.JetStream, error) {
+	if requestTimeout <= 0 {
+		requestTimeout = DefaultRequestTimeout
+	}
+
+	nc, err := nats.Connect(url, clientOptions(creds, requestTimeout)...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("connect to %s: %w", url, err)
 	}

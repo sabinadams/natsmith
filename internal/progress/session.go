@@ -40,11 +40,6 @@ func (s *Session) BucketFail(kind, name string, index, total int, reason string,
 	fmt.Fprintln(os.Stderr, report.BucketError(kind, name, index, total, reason, err))
 }
 
-// Complete prints the final command summary.
-func (s *Session) Complete(msg string) {
-	fmt.Fprintln(os.Stderr, msg)
-}
-
 // Completef prints a formatted final command summary.
 func (s *Session) Completef(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, "\n"+format+"\n", args...)

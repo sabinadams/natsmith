@@ -62,16 +62,6 @@ func TestReportScanObjectsNoProgress(t *testing.T) {
 	}
 }
 
-func TestReportVerifyNoProgress(t *testing.T) {
-	out := testutil.CaptureStderr(t, func() {
-		bar := &BucketBar{enabled: false, baseDesc: "KV schema (1/1) — verifying"}
-		bar.ReportVerify(10, 10)
-	})
-	if !strings.Contains(out, "10/10 keys checked") {
-		t.Fatalf("output: %s", out)
-	}
-}
-
 func TestPrintHeaderAndFinishMessage(t *testing.T) {
 	out := testutil.CaptureStderr(t, func() {
 		PrintHeader("KV migration")

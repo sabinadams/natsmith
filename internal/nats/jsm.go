@@ -15,16 +15,7 @@ func ConnectJSM(url, creds string, requestTimeout time.Duration) (*nats.Conn, *j
 		requestTimeout = DefaultRequestTimeout
 	}
 
-	opts := []nats.Option{
-		nats.Name("natsmith"),
-		nats.MaxReconnects(-1),
-		nats.Timeout(requestTimeout),
-	}
-	if creds != "" {
-		opts = append(opts, nats.UserCredentials(creds))
-	}
-
-	nc, err := nats.Connect(url, opts...)
+	nc, err := nats.Connect(url, clientOptions(creds, requestTimeout)...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("connect to %s: %w", url, err)
 	}
