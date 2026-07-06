@@ -30,4 +30,5 @@ coverage/
 website/node_modules/
 website/.next/
 website/out/
+website/public/_pagefind/
 website/lib/version.generated.js

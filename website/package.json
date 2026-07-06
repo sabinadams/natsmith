@@ -6,6 +6,7 @@
     "dev": "next dev",
     "prebuild": "sh ../scripts/fetch-release-version.sh",
     "build": "next build --webpack",
+    "postbuild": "pagefind --site .next/server/app --output-path out/_pagefind",
     "start": "next start",
     "postinstall": "patch-package"
   },
@@ -18,6 +19,7 @@
     "shiki": "^3.2.1"
   },
   "devDependencies": {
+    "pagefind": "^1.5.2",
     "patch-package": "^8.0.0"
   }
 }
